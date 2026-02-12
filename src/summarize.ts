@@ -125,8 +125,8 @@ export interface PRSummary extends TimeSeriesSummary {
 }
 
 export function summarizePRs(data: AllPRsResponse): PRSummary {
-  // PRs: [date, opened, openedCumul, closed, closedCumul, merged, mergedCumul, ?, ?]
-  const entries: TimeSeriesEntry[] = data.prs.map(e => [e[0] as string, e[1] as number, e[2] as number]);
+  // PRs: [date, daily_opened, daily_closed, daily_merged, openedCumul, closedCumul, mergedCumul, ?, ?]
+  const entries: TimeSeriesEntry[] = data.prs.map(e => [e[0] as string, e[1] as number, e[4] as number]);
   const base = summarizeTimeSeries(entries);
 
   const cutoff30 = daysAgo(30);
@@ -139,8 +139,8 @@ export function summarizePRs(data: AllPRsResponse): PRSummary {
   for (const e of data.prs) {
     const d = parseDate(e[0] as string);
     const opened = (e[1] as number) || 0;
-    const closed = (e[3] as number) || 0;
-    const merged = (e[5] as number) || 0;
+    const closed = (e[2] as number) || 0;
+    const merged = (e[3] as number) || 0;
     totalOpened += opened;
     totalClosed += closed;
     totalMerged += merged;
@@ -185,8 +185,8 @@ export interface IssueSummary extends TimeSeriesSummary {
 }
 
 export function summarizeIssues(data: AllIssuesResponse): IssueSummary {
-  // Issues: [date, opened, openedCumul, closed, closedCumul, ?, ?]
-  const entries: TimeSeriesEntry[] = data.issues.map(e => [e[0] as string, e[1] as number, e[2] as number]);
+  // Issues: [date, daily_opened, daily_closed, openedCumul, closedCumul, ?, ?]
+  const entries: TimeSeriesEntry[] = data.issues.map(e => [e[0] as string, e[1] as number, e[3] as number]);
   const base = summarizeTimeSeries(entries);
 
   const cutoff30 = daysAgo(30);
@@ -199,7 +199,7 @@ export function summarizeIssues(data: AllIssuesResponse): IssueSummary {
   for (const e of data.issues) {
     const d = parseDate(e[0] as string);
     const opened = (e[1] as number) || 0;
-    const closed = (e[3] as number) || 0;
+    const closed = (e[2] as number) || 0;
     totalOpened += opened;
     totalClosed += closed;
     if (d >= cutoff30) { openedLast30 += opened; closedLast30 += closed; }
