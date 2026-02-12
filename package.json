@@ -1,0 +1,18 @@
+{
+  "name": "repo-summary-prompt",
+  "version": "1.0.0",
+  "description": "CLI tool that fetches GitHub repo metrics and generates an LLM prompt summarizing repo health and trajectory",
+  "type": "module",
+  "bin": {
+    "repo-summary-prompt": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
