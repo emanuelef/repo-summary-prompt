@@ -1,3 +1,59 @@
+// --- Ollama Integration ---
+
+interface OllamaRequest {
+  model: string;
+  prompt: string;
+  stream?: boolean;
+}
+
+interface OllamaResponse {
+  response: string;
+}
+
+/**
+ * Checks if Ollama is available and enabled via environment variables.
+ * @returns {boolean}
+ */
+function isOllamaEnabled(): boolean {
+  return process.env.USE_OLLAMA === 'true' && !!process.env.OLLAMA_URL && !!process.env.OLLAMA_MODEL;
+}
+
+/**
+ * Sends a prompt to Ollama if enabled and available, returns the result or null on error/timeout.
+ * @param {string} prompt
+ * @param {number} [timeoutMs=1200000] - up to 20 minutes
+ * @returns {Promise<string|null>}
+ */
+export async function tryOllama(prompt: string, timeoutMs = 1200000): Promise<string | null> {
+  if (!isOllamaEnabled()) return null;
+  const url = `${process.env.OLLAMA_URL?.replace(/\/$/, '')}/api/generate`;
+  const reqBody: OllamaRequest = {
+    model: process.env.OLLAMA_MODEL!,
+    prompt,
+    stream: false,
+  };
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(reqBody),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) {
+      console.error(`[Ollama] API returned status ${res.status}`);
+      return null;
+    }
+    const data = (await res.json()) as OllamaResponse;
+    return data.response;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[Ollama] Request failed: ${msg}`);
+    return null;
+  }
+}
 const DEFAULT_API_URL = "https://emafuma.mywire.org:8090";
 
 function getApiUrl(): string {
@@ -156,6 +212,10 @@ async function fetchJson<T>(path: string, params: Record<string, string>, timeou
 export function fetchStats(repo: string) {
   return fetchJson<RepoStats>("/stats", { repo });
 }
+
+// Example usage for Ollama integration:
+// const ollamaResult = await tryOllama("Summarize this repo's recent activity...");
+// if (ollamaResult) { ... use ollamaResult ... }
 
 export function fetchStars(repo: string) {
   return fetchJson<AllStarsResponse>("/allStars", { repo });
