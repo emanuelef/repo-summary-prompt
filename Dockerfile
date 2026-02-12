@@ -4,9 +4,9 @@ FROM node:24-slim
 # Set working directory
 WORKDIR /app
 
-# Copy package files and install dependencies
+# Copy package files and install ALL dependencies (including dev for build)
 COPY package.json package-lock.json* ./
-RUN npm install && npm cache clean --force;
+RUN npm ci && npm cache clean --force;
 
 # Copy UI and install UI dependencies
 COPY ui ./ui
