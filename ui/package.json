@@ -1,0 +1,10 @@
+{
+  "name": "repo-summary-ui",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "module",
+  "dependencies": {
+    "hono": "^4.11.9",
+    "@hono/node-server": "^1.19.9"
+  }
+}

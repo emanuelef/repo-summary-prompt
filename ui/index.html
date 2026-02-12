@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Repo Summary Prompt UI</title>
+  <style>
+    body { font-family: sans-serif; margin: 2em; background: #f8f9fa; }
+    .container { max-width: 600px; margin: auto; background: #fff; padding: 2em; border-radius: 8px; box-shadow: 0 2px 8px #0001; }
+    input, button { font-size: 1em; padding: 0.5em; }
+    input { width: 80%; margin-right: 0.5em; }
+    button { background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    button:disabled { background: #aaa; }
+    pre { background: #222; color: #eee; padding: 1em; border-radius: 6px; overflow-x: auto; }
+    .error { color: #c00; margin-top: 1em; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Repo Summary Prompt</h2>
+    <form id="repoForm">
+      <input type="text" id="repoInput" placeholder="owner/repo or full GitHub URL" required />
+      <button type="submit">Generate Prompt</button>
+    </form>
+    <div id="loading" style="display:none;">Generating prompt...</div>
+    <div id="error" class="error"></div>
+    <pre id="output" style="display:none;"></pre>
+  </div>
+  <script>
+    const form = document.getElementById('repoForm');
+    const input = document.getElementById('repoInput');
+    const output = document.getElementById('output');
+    const loading = document.getElementById('loading');
+    const error = document.getElementById('error');
+
+    // If running on GitHub Pages, use the deployed server endpoint
+    const isGhPages = location.hostname.endsWith('github.io');
+    const apiBase = isGhPages ? 'https://YOUR_SERVER_HOST:3000' : '';
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      output.style.display = 'none';
+      error.textContent = '';
+      loading.style.display = 'block';
+      try {
+        const res = await fetch(apiBase + '/api/prompt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repo: input.value })
+        });
+        const data = await res.json();
+        loading.style.display = 'none';
+        if (data.prompt) {
+          output.textContent = data.prompt;
+          output.style.display = 'block';
+        } else {
+          error.textContent = data.error || 'Unknown error';
+        }
+      } catch (err) {
+        loading.style.display = 'none';
+        error.textContent = err.message || 'Request failed';
+      }
+    };
+  </script>
+</body>
+</html>
