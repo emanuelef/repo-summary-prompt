@@ -41,26 +41,32 @@ app.get('/api/prompt', async (c) => {
     activeChild = null;
   }
 
+  let closed = false;
+  let child = null;
+
   return new Response(
     new ReadableStream({
       start(controller) {
         const enc = new TextEncoder();
-        let closed = false;
         
         const send = (event, data) => {
-          if (!closed) {
+          if (closed) return;
+          try {
             controller.enqueue(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+          } catch {
+            closed = true;
           }
         };
         
         const closeController = () => {
-          if (!closed) {
-            closed = true;
+          if (closed) return;
+          closed = true;
+          try {
             controller.close();
-          }
+          } catch {}
         };
 
-        const child = spawn('npx', ['tsx', 'src/index.ts', repoStr], {
+        child = spawn('npx', ['tsx', 'src/index.ts', repoStr], {
           cwd: process.cwd(),
           env: { ...process.env },
         });
@@ -107,6 +113,14 @@ app.get('/api/prompt', async (c) => {
           }
           closeController();
         });
+      },
+      cancel() {
+        closed = true;
+        if (child) {
+          try { child.kill('SIGTERM'); } catch {}
+          child = null;
+          activeChild = null;
+        }
       },
     }),
     {
