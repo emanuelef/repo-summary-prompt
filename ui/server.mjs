@@ -115,5 +115,6 @@ app.post('/api/prompt', async (c) => {
 });
 
 const port = process.env.PORT || 3000;
-serve({ fetch: app.fetch, port });
-console.log(`Hono UI server running at http://localhost:${port}`);
+const hostname = '0.0.0.0';
+serve({ fetch: app.fetch, port, hostname });
+console.log(`Hono UI server running at http://${hostname}:${port}`);
