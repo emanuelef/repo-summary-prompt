@@ -11,6 +11,10 @@ app.get('/', async (c) => {
   return c.html(html.toString());
 });
 
+
+// Health check endpoint
+app.get('/health', (c) => c.json({ status: 'ok' }));
+
 // Serve static assets (if any)
 app.get('/favicon.ico', (c) => c.body('', 204));
 
