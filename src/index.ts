@@ -92,6 +92,12 @@ async function main() {
   // Run all API calls sequentially to avoid rate-limiting and excessive token usage
   const stats = await tracked("stats", () => fetchStats(repo));
 
+  // If stats fetch failed, the repo likely doesn't exist — bail early
+  if (!stats) {
+    console.error(`\nError: Could not fetch data for "${repo}". The repository may not exist or the API is unavailable.`);
+    process.exit(1);
+  }
+
   // Emit stats metrics for UI dashboard
   if (stats) {
     console.error(`@@METRICS@@${JSON.stringify({

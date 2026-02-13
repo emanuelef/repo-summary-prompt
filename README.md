@@ -61,6 +61,46 @@ npm link
 repo-summary-prompt golang/go
 ```
 
+## Development
+
+The project has two parts: a CLI backend and a web UI frontend.
+
+### Backend (CLI)
+
+```bash
+npm install
+npx tsx src/index.ts <owner/repo>
+```
+
+### Frontend (Web UI)
+
+```bash
+cd ui
+npm install
+cd ..
+node ui/server.mjs
+```
+
+The web UI starts at `http://localhost:3000`. It spawns the CLI as a child process and streams progress via SSE.
+
+To override the stats API URL, set `REPO_STATS_API_URL`:
+
+```bash
+REPO_STATS_API_URL=http://localhost:8090 node ui/server.mjs
+```
+
+### Running both together
+
+```bash
+# Terminal 1 — install deps
+npm install && cd ui && npm install && cd ..
+
+# Terminal 1 — start the web UI (serves frontend + runs CLI on demand)
+node ui/server.mjs
+```
+
+Then open `http://localhost:3000` in your browser.
+
 ## Build
 
 ```bash

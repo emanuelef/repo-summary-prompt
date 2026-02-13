@@ -25,12 +25,21 @@ function sanitizeRepo(str) {
   return cleaned;
 }
 
+// Only one CLI process at a time to avoid GitHub rate-limit exhaustion
+let activeChild = null;
+
 // API endpoint — streams progress via SSE, then sends the final prompt
 app.get('/api/prompt', async (c) => {
   const repo = c.req.query('repo');
   if (!repo) return c.json({ error: 'Missing repo' }, 400);
   const repoStr = sanitizeRepo(repo);
   if (!repoStr) return c.json({ error: 'Invalid repo format. Use owner/repo' }, 400);
+
+  // Kill any in-flight CLI process before starting a new one
+  if (activeChild) {
+    try { activeChild.kill('SIGTERM'); } catch {}
+    activeChild = null;
+  }
 
   return new Response(
     new ReadableStream({
@@ -44,8 +53,10 @@ app.get('/api/prompt', async (c) => {
           cwd: process.cwd(),
           env: { ...process.env },
         });
+        activeChild = child;
 
         let stdout = '';
+        let lastStderrLine = '';
 
         child.stdout.on('data', (chunk) => {
           stdout += chunk.toString();
@@ -61,18 +72,25 @@ app.get('/api/prompt', async (c) => {
               } catch {}
             } else {
               send('progress', line);
+              lastStderrLine = line.trim();
             }
           }
         });
 
         child.on('error', (err) => {
+          activeChild = null;
           send('error', err.message);
           controller.close();
         });
 
         child.on('close', (code) => {
+          activeChild = null;
           if (code !== 0) {
-            send('error', `Process exited with code ${code}`);
+            // Use the last stderr line as error message if it looks like an error
+            const msg = lastStderrLine.startsWith('Error:')
+              ? lastStderrLine
+              : `Process exited with code ${code}`;
+            send('error', msg);
           } else {
             send('done', stdout);
           }

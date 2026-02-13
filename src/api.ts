@@ -239,7 +239,13 @@ async function fetchJson<T>(
         return data;
       }
 
-      // Non-2xx: log and retry (the backend may still be processing)
+      // 404 = repo not found — don't retry, fail immediately
+      if (res.status === 404) {
+        console.error(`[API] ${label} returned 404 — not found`);
+        return null;
+      }
+
+      // Other non-2xx: log and retry (the backend may still be processing)
       console.error(`[API] ${label} returned ${res.status} (attempt ${attempt}), retrying in ${Math.round(delay / 1000)}s...`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
