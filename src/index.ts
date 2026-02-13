@@ -70,51 +70,36 @@ async function main() {
 
   console.error(`Fetching data for ${repo}...`);
 
-  // Fire all API calls in parallel
-  const [
-    statsResult,
-    starsResult,
-    commitsResult,
-    prsResult,
-    issuesResult,
-    forksResult,
-    contributorsResult,
-    ghMentionsResult,
-    hnResult,
-    redditResult,
-    youtubeResult,
-    releasesResult,
-  ] = await Promise.allSettled([
-    fetchStats(repo),
-    fetchStars(repo),
-    fetchCommits(repo),
-    fetchPRs(repo),
-    fetchIssues(repo),
-    fetchForks(repo),
-    fetchContributors(repo),
-    fetchGHMentions(repo),
-    fetchHNMentions(searchQuery),
-    fetchRedditMentions(searchQuery),
-    fetchYouTubeMentions(searchQuery),
-    fetchReleases(repo),
-  ]);
+  // Wrap each fetch to log progress to stderr
+  async function tracked<T>(label: string, fn: () => Promise<T>): Promise<T | null> {
+    console.error(`  → ${label}: fetching...`);
+    const start = Date.now();
+    try {
+      const result = await fn();
+      const secs = ((Date.now() - start) / 1000).toFixed(1);
+      const ok = result != null;
+      console.error(`  ${ok ? "✓" : "✗"} ${label}: ${ok ? "done" : "no data"} (${secs}s)`);
+      return result;
+    } catch {
+      const secs = ((Date.now() - start) / 1000).toFixed(1);
+      console.error(`  ✗ ${label}: failed (${secs}s)`);
+      return null;
+    }
+  }
 
-  // Extract values (null if rejected or returned null)
-  const val = <T>(r: PromiseSettledResult<T | null>): T | null =>
-    r.status === "fulfilled" ? r.value : null;
-
-  const stats = val(statsResult);
-  const starsData = val(starsResult);
-  const commitsData = val(commitsResult);
-  const prsData = val(prsResult);
-  const issuesData = val(issuesResult);
-  const forksData = val(forksResult);
-  const contributorsData = val(contributorsResult);
-  const ghMentionsData = val(ghMentionsResult);
-  const hnData = val(hnResult);
-  const redditData = val(redditResult);
-  const youtubeData = val(youtubeResult);
-  const releasesData = val(releasesResult);
+  // Run all API calls sequentially to avoid rate-limiting and excessive token usage
+  const stats = await tracked("stats", () => fetchStats(repo));
+  const starsData = await tracked("stars", () => fetchStars(repo));
+  const commitsData = await tracked("commits", () => fetchCommits(repo));
+  const prsData = await tracked("PRs", () => fetchPRs(repo));
+  const issuesData = await tracked("issues", () => fetchIssues(repo));
+  const forksData = await tracked("forks", () => fetchForks(repo));
+  const contributorsData = await tracked("contributors", () => fetchContributors(repo));
+  const ghMentionsData = await tracked("GH mentions", () => fetchGHMentions(repo));
+  const hnData = await tracked("HackerNews", () => fetchHNMentions(searchQuery));
+  const redditData = await tracked("Reddit", () => fetchRedditMentions(searchQuery));
+  const youtubeData = await tracked("YouTube", () => fetchYouTubeMentions(searchQuery));
+  const releasesData = await tracked("releases", () => fetchReleases(repo));
 
   // Summarize
   const stars = starsData ? summarizeStars(starsData) : null;

@@ -11,8 +11,13 @@
     input { width: 80%; margin-right: 0.5em; }
     button { background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
     button:disabled { background: #aaa; }
-    pre { background: #222; color: #eee; padding: 1em; border-radius: 6px; overflow-x: auto; }
+    pre { background: #222; color: #eee; padding: 1em; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; }
     .error { color: #c00; margin-top: 1em; }
+    #progressLog { background: #1a1a2e; color: #c8d6e5; padding: 0.8em 1em; border-radius: 6px; font-family: monospace; font-size: 0.85em; max-height: 260px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; margin-top: 1em; }
+    #progressLog .line-ok { color: #2ecc71; }
+    #progressLog .line-fail { color: #e74c3c; }
+    #progressLog .line-info { color: #74b9ff; }
+    #progressLog .line-retry { color: #fdcb6e; }
   </style>
 </head>
 <body>
@@ -23,6 +28,7 @@
       <button type="submit">Generate Prompt</button>
     </form>
     <div id="loading" style="display:none;">Generating prompt...</div>
+    <div id="progressLog" style="display:none;"></div>
     <div id="error" class="error"></div>
     <pre id="output" style="display:none;"></pre>
   </div>
@@ -31,34 +37,98 @@
     const input = document.getElementById('repoInput');
     const output = document.getElementById('output');
     const loading = document.getElementById('loading');
+    const progressLog = document.getElementById('progressLog');
     const error = document.getElementById('error');
 
     // If running on GitHub Pages, use the deployed server endpoint
     const isGhPages = location.hostname.endsWith('github.io');
     const apiBase = isGhPages ? 'https://YOUR_SERVER_HOST:3000' : '';
 
+    function classifyLine(text) {
+      if (text.includes('✓')) return 'line-ok';
+      if (text.includes('✗')) return 'line-fail';
+      if (/retrying|error|failed/i.test(text)) return 'line-retry';
+      return 'line-info';
+    }
+
+    function appendProgress(text) {
+      const span = document.createElement('span');
+      span.className = classifyLine(text);
+      span.textContent = text + '\n';
+      progressLog.appendChild(span);
+      progressLog.scrollTop = progressLog.scrollHeight;
+    }
+
     form.onsubmit = async (e) => {
       e.preventDefault();
       output.style.display = 'none';
       error.textContent = '';
+      progressLog.innerHTML = '';
+      progressLog.style.display = 'block';
       loading.style.display = 'block';
+      form.querySelector('button').disabled = true;
+
       try {
-        const res = await fetch(apiBase + '/api/prompt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ repo: input.value })
-        });
-        const data = await res.json();
+        const repoVal = encodeURIComponent(input.value.trim());
+        const res = await fetch(`${apiBase}/api/prompt?repo=${repoVal}`);
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || `HTTP ${res.status}`);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let finalPrompt = null;
+        let gotError = null;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          // Parse SSE events from buffer
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop(); // keep incomplete chunk
+
+          for (const part of parts) {
+            let eventType = 'message';
+            let data = '';
+            for (const line of part.split('\n')) {
+              if (line.startsWith('event: ')) eventType = line.slice(7);
+              else if (line.startsWith('data: ')) data = line.slice(6);
+            }
+            if (!data) continue;
+
+            try {
+              const parsed = JSON.parse(data);
+              if (eventType === 'progress') {
+                appendProgress(parsed);
+              } else if (eventType === 'done') {
+                finalPrompt = parsed;
+              } else if (eventType === 'error') {
+                gotError = parsed;
+              }
+            } catch {}
+          }
+        }
+
         loading.style.display = 'none';
-        if (data.prompt) {
-          output.textContent = data.prompt;
+
+        if (gotError) {
+          error.textContent = gotError;
+        } else if (finalPrompt) {
+          output.textContent = finalPrompt;
           output.style.display = 'block';
         } else {
-          error.textContent = data.error || 'Unknown error';
+          error.textContent = 'No output received';
         }
       } catch (err) {
         loading.style.display = 'none';
         error.textContent = err.message || 'Request failed';
+      } finally {
+        form.querySelector('button').disabled = false;
       }
     };
   </script>

@@ -183,34 +183,87 @@ export interface Release {
 
 // --- Fetch helpers ---
 
-async function fetchJson<T>(path: string, params: Record<string, string>, timeoutMs = 120_000): Promise<T | null> {
+interface FetchJsonOptions {
+  /** Timeout per individual HTTP request attempt (default: 5 min) */
+  perRequestTimeoutMs?: number;
+  /** Total wall-clock time to keep retrying (default: 15 min) */
+  totalTimeoutMs?: number;
+  /** Initial delay between retries in ms (default: 3000). Doubles each retry, capped at 30s. */
+  retryDelayMs?: number;
+  /** Label for progress logs (default: the path) */
+  label?: string;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchJson<T>(
+  path: string,
+  params: Record<string, string>,
+  opts: FetchJsonOptions = {},
+): Promise<T | null> {
+  const {
+    perRequestTimeoutMs = 5 * 60_000,
+    totalTimeoutMs = 15 * 60_000,
+    retryDelayMs = 3_000,
+    label = path,
+  } = opts;
+
   const url = new URL(path, getApiUrl());
   for (const [k, v] of Object.entries(params)) {
     url.searchParams.set(k, v);
   }
 
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    const res = await fetch(url.toString(), { signal: controller.signal });
-    clearTimeout(timer);
+  const deadline = Date.now() + totalTimeoutMs;
+  let delay = retryDelayMs;
+  let attempt = 0;
 
-    if (!res.ok) {
-      console.error(`[API] ${path} returned ${res.status}`);
-      return null;
+  while (Date.now() < deadline) {
+    attempt++;
+    try {
+      const controller = new AbortController();
+      const remaining = deadline - Date.now();
+      const timeout = Math.min(perRequestTimeoutMs, remaining);
+      if (timeout <= 0) break;
+
+      const timer = setTimeout(() => controller.abort(), timeout);
+      const res = await fetch(url.toString(), { signal: controller.signal });
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const data = (await res.json()) as T;
+        if (attempt > 1) {
+          console.error(`[API] ${label} ✓ succeeded on attempt ${attempt}`);
+        }
+        return data;
+      }
+
+      // Non-2xx: log and retry (the backend may still be processing)
+      console.error(`[API] ${label} returned ${res.status} (attempt ${attempt}), retrying in ${Math.round(delay / 1000)}s...`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (Date.now() + delay >= deadline) {
+        console.error(`[API] ${label} failed after ${attempt} attempt(s): ${msg}`);
+        return null;
+      }
+      console.error(`[API] ${label} error: ${msg} (attempt ${attempt}), retrying in ${Math.round(delay / 1000)}s...`);
     }
-    return (await res.json()) as T;
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[API] ${path} failed: ${msg}`);
-    return null;
+
+    // Wait before retrying; bail out if we'd exceed the deadline
+    if (Date.now() + delay >= deadline) break;
+    await sleep(delay);
+    delay = Math.min(delay * 2, 30_000);
   }
+
+  console.error(`[API] ${label} timed out after ${attempt} attempt(s) (${Math.round(totalTimeoutMs / 60_000)} min total)`);
+  return null;
 }
 
 // --- Public fetch functions ---
 
 export function fetchStats(repo: string) {
-  return fetchJson<RepoStats>("/stats", { repo });
+  return fetchJson<RepoStats>("/stats", { repo }, { label: "stats" });
 }
 
 // Example usage for Ollama integration:
@@ -218,47 +271,52 @@ export function fetchStats(repo: string) {
 // if (ollamaResult) { ... use ollamaResult ... }
 
 export function fetchStars(repo: string) {
-  return fetchJson<AllStarsResponse>("/allStars", { repo });
+  // Stars can take very long for large repos (daily stars explorer needs to process history)
+  return fetchJson<AllStarsResponse>("/allStars", { repo }, {
+    label: "stars",
+    totalTimeoutMs: 30 * 60_000,   // up to 30 minutes total
+    perRequestTimeoutMs: 10 * 60_000, // 10 min per attempt
+  });
 }
 
 export function fetchCommits(repo: string) {
-  return fetchJson<AllCommitsResponse>("/allCommits", { repo });
+  return fetchJson<AllCommitsResponse>("/allCommits", { repo }, { label: "commits" });
 }
 
 export function fetchPRs(repo: string) {
-  return fetchJson<AllPRsResponse>("/allPRs", { repo });
+  return fetchJson<AllPRsResponse>("/allPRs", { repo }, { label: "PRs" });
 }
 
 export function fetchIssues(repo: string) {
-  return fetchJson<AllIssuesResponse>("/allIssues", { repo });
+  return fetchJson<AllIssuesResponse>("/allIssues", { repo }, { label: "issues" });
 }
 
 export function fetchForks(repo: string) {
-  return fetchJson<AllForksResponse>("/allForks", { repo });
+  return fetchJson<AllForksResponse>("/allForks", { repo }, { label: "forks" });
 }
 
 export function fetchContributors(repo: string) {
-  return fetchJson<AllContributorsResponse>("/allContributors", { repo });
+  return fetchJson<AllContributorsResponse>("/allContributors", { repo }, { label: "contributors" });
 }
 
 export function fetchGHMentions(repo: string) {
-  return fetchJson<GHMentionsResponse>("/ghmentions", { repo, limit: "100" });
+  return fetchJson<GHMentionsResponse>("/ghmentions", { repo, limit: "100" }, { label: "GH mentions" });
 }
 
 export function fetchHNMentions(query: string) {
-  return fetchJson<HNItem[]>("/hackernews", { query });
+  return fetchJson<HNItem[]>("/hackernews", { query }, { label: "HackerNews" });
 }
 
 export function fetchRedditMentions(query: string) {
-  return fetchJson<RedditItem[]>("/reddit", { query });
+  return fetchJson<RedditItem[]>("/reddit", { query }, { label: "Reddit" });
 }
 
 export function fetchYouTubeMentions(query: string) {
-  return fetchJson<YouTubeItem[]>("/youtube", { query });
+  return fetchJson<YouTubeItem[]>("/youtube", { query }, { label: "YouTube" });
 }
 
 export function fetchReleases(repo: string) {
-  return fetchJson<Release[]>("/allReleases", { repo });
+  return fetchJson<Release[]>("/allReleases", { repo }, { label: "releases" });
 }
 
 // Accept custom API URL from CLI flag
