@@ -3,46 +3,212 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Repo Summary Prompt UI</title>
+  <title>Repo Summary Prompt</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>📊</text></svg>">
   <style>
-    body { font-family: sans-serif; margin: 2em; background: #f8f9fa; }
-    .container { max-width: 600px; margin: auto; background: #fff; padding: 2em; border-radius: 8px; box-shadow: 0 2px 8px #0001; }
-    input, button { font-size: 1em; padding: 0.5em; }
-    input { width: 80%; margin-right: 0.5em; }
-    button { background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
-    button:disabled { background: #aaa; }
-    pre { background: #222; color: #eee; padding: 1em; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; }
-    .error { color: #c00; margin-top: 1em; }
-    #progressLog { background: #1a1a2e; color: #c8d6e5; padding: 0.8em 1em; border-radius: 6px; font-family: monospace; font-size: 0.85em; max-height: 260px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; margin-top: 1em; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 2em 1em; }
+    .container { max-width: 1200px; margin: auto; }
+    .header { background: #fff; padding: 2em; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); margin-bottom: 2em; }
+    h1 { margin: 0 0 1em 0; color: #333; font-size: 2em; }
+    .search-bar { display: flex; gap: 0.5em; }
+    .search-bar input { flex: 1; font-size: 1.1em; padding: 0.8em 1em; border: 2px solid #e0e0e0; border-radius: 8px; outline: none; transition: border 0.2s; }
+    .search-bar input:focus { border-color: #667eea; }
+    .search-bar button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; border-radius: 8px; padding: 0.8em 2em; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+    .search-bar button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
+    .search-bar button:disabled { opacity: 0.6; cursor: not-allowed; }
+    
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5em; margin-bottom: 2em; }
+    .metric-card { background: #fff; padding: 1.5em; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s; }
+    .metric-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+    .metric-title { font-size: 0.9em; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5em; font-weight: 600; }
+    .metric-value { font-size: 2.2em; font-weight: 700; color: #333; margin-bottom: 0.5em; }
+    .metric-chart { height: 60px; margin-top: 1em; display: flex; align-items: flex-end; gap: 2px; }
+    .metric-bar { flex: 1; background: linear-gradient(to top, #667eea, #a78bfa); border-radius: 2px 2px 0 0; min-height: 2px; transition: all 0.3s; }
+    .metric-bar:hover { opacity: 0.7; }
+    .metric-subtitle { font-size: 0.85em; color: #666; margin-top: 0.5em; }
+    
+    .repo-info { background: #fff; padding: 1.5em; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); margin-bottom: 2em; }
+    .repo-info h2 { margin: 0 0 0.5em 0; font-size: 1.5em; color: #333; }
+    .repo-info p { margin: 0.3em 0; color: #666; }
+    .repo-tags { display: flex; gap: 0.5em; flex-wrap: wrap; margin-top: 1em; }
+    .repo-tag { background: #f0f0f0; padding: 0.3em 0.8em; border-radius: 20px; font-size: 0.85em; color: #555; }
+    
+    #progressLog { background: #1e1e2e; color: #c8d6e5; padding: 1em; border-radius: 12px; font-family: 'SF Mono', Monaco, monospace; font-size: 0.9em; max-height: 200px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 2em; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
     #progressLog .line-ok { color: #2ecc71; }
     #progressLog .line-fail { color: #e74c3c; }
     #progressLog .line-info { color: #74b9ff; }
     #progressLog .line-retry { color: #fdcb6e; }
+    
+    .prompt-section { background: #fff; padding: 2em; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .prompt-section h2 { margin: 0 0 1em 0; color: #333; }
+    pre { background: #f8f9fa; color: #333; padding: 1.5em; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; border: 1px solid #e0e0e0; margin: 0; font-size: 0.9em; line-height: 1.6; }
+    .error { color: #e74c3c; margin-top: 1em; background: #fee; padding: 1em; border-radius: 8px; border-left: 4px solid #e74c3c; }
+    .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; margin-left: 0.5em; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Repo Summary Prompt</h2>
-    <form id="repoForm">
-      <input type="text" id="repoInput" placeholder="owner/repo or full GitHub URL" required />
-      <button type="submit">Generate Prompt</button>
-    </form>
-    <div id="loading" style="display:none;">Generating prompt...</div>
+    <div class="header">
+      <h1>📊 Repo Summary Prompt</h1>
+      <form id="repoForm" class="search-bar">
+        <input type="text" id="repoInput" placeholder="owner/repo or full GitHub URL" required />
+        <button type="submit" id="submitBtn">Generate</button>
+      </form>
+    </div>
+
+    <div id="repoInfo" style="display:none;"></div>
+    <div id="metricsGrid" class="metrics-grid" style="display:none;"></div>
     <div id="progressLog" style="display:none;"></div>
-    <div id="error" class="error"></div>
-    <pre id="output" style="display:none;"></pre>
+    <div id="error" class="error" style="display:none;"></div>
+    <div id="promptSection" class="prompt-section" style="display:none;">
+      <h2>Generated Prompt</h2>
+      <pre id="output"></pre>
+    </div>
   </div>
   <script>
     const form = document.getElementById('repoForm');
     const input = document.getElementById('repoInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const repoInfo = document.getElementById('repoInfo');
+    const metricsGrid = document.getElementById('metricsGrid');
     const output = document.getElementById('output');
-    const loading = document.getElementById('loading');
     const progressLog = document.getElementById('progressLog');
-    const error = document.getElementById('error');
+    const promptSection = document.getElementById('promptSection');
+    const errorDiv = document.getElementById('error');
 
-    // If running on GitHub Pages, use the deployed server endpoint
     const isGhPages = location.hostname.endsWith('github.io');
     const apiBase = isGhPages ? 'https://YOUR_SERVER_HOST:3000' : '';
+
+    const metrics = {};
+
+    function fmt(n) {
+      return n?.toLocaleString?.('en-US') || '0';
+    }
+
+    function createMetricCard(title, value, subtitle, series) {
+      const card = document.createElement('div');
+      card.className = 'metric-card';
+      
+      let chart = '';
+      if (series?.length) {
+        const max = Math.max(...series.map(s => s[1] || 0), 1);
+        const bars = series.map(s => {
+          const height = ((s[1] || 0) / max) * 100;
+          return `<div class="metric-bar" style="height: ${height}%" title="${s[0]}: ${s[1]}"></div>`;
+        }).join('');
+        chart = `<div class="metric-chart">${bars}</div>`;
+      }
+
+      card.innerHTML = `
+        <div class="metric-title">${title}</div>
+        <div class="metric-value">${fmt(value)}</div>
+        ${subtitle ? `<div class="metric-subtitle">${subtitle}</div>` : ''}
+        ${chart}
+      `;
+      return card;
+    }
+
+    function updateDashboard() {
+      // Repo info
+      if (metrics.stats) {
+        const s = metrics.stats;
+        repoInfo.innerHTML = `
+          <h2>${s.data.stars ? '⭐' : '📦'} ${input.value.trim()}</h2>
+          ${s.data.description ? `<p>${s.data.description}</p>` : ''}
+          <div class="repo-tags">
+            ${s.data.language ? `<span class="repo-tag">🔹 ${s.data.language}</span>` : ''}
+            ${s.data.archived ? '<span class="repo-tag" style="background:#fee;">⚠️ Archived</span>' : ''}
+            <span class="repo-tag">📦 ${(s.data.size / 1024).toFixed(1)} MB</span>
+            <span class="repo-tag">👥 ${fmt(s.data.mentionableUsers)} users</span>
+          </div>
+        `;
+        repoInfo.style.display = 'block';
+      }
+
+      // Metrics cards
+      metricsGrid.innerHTML = '';
+      
+      if (metrics.stats) {
+        metricsGrid.appendChild(createMetricCard(
+          'Total Stars',
+          metrics.stats.data.stars,
+          metrics.stars?.data.series?.length ? `Last 30 days trend` : '',
+          metrics.stars?.data.series
+        ));
+      }
+
+      if (metrics.commits) {
+        const total = metrics.commits.data.total;
+        const last30 = metrics.commits.data.series.reduce((sum, s) => sum + (s[1] || 0), 0);
+        metricsGrid.appendChild(createMetricCard(
+          'Commits',
+          total,
+          `${last30} in last 30 days`,
+          metrics.commits.data.series
+        ));
+      }
+
+      if (metrics.prs) {
+        const opened = metrics.prs.data.series.reduce((sum, s) => sum + (s[1] || 0), 0);
+        const merged = metrics.prs.data.series.reduce((sum, s) => sum + (s[3] || 0), 0);
+        metricsGrid.appendChild(createMetricCard(
+          'Pull Requests (30d)',
+          opened,
+          `${merged} merged`,
+          metrics.prs.data.series.map(s => [s[0], s[1]])
+        ));
+      }
+
+      if (metrics.issues) {
+        const opened = metrics.issues.data.series.reduce((sum, s) => sum + (s[1] || 0), 0);
+        const closed = metrics.issues.data.series.reduce((sum, s) => sum + (s[2] || 0), 0);
+        metricsGrid.appendChild(createMetricCard(
+          'Issues (30d)',
+          opened,
+          `${closed} closed`,
+          metrics.issues.data.series.map(s => [s[0], s[1]])
+        ));
+      }
+
+      if (metrics.stats) {
+        metricsGrid.appendChild(createMetricCard(
+          'Forks',
+          metrics.stats.data.forks,
+          metrics.forks?.data.series?.length ? 'Last 30 days trend' : '',
+          metrics.forks?.data.series
+        ));
+      }
+
+      if (metrics.contributors) {
+        const total = metrics.contributors.data.total;
+        const last30 = metrics.contributors.data.series.reduce((sum, s) => sum + (s[1] || 0), 0);
+        metricsGrid.appendChild(createMetricCard(
+          'Contributors',
+          total,
+          `${last30} active in last 30 days`,
+          metrics.contributors.data.series
+        ));
+      }
+
+      if (metrics.stats && metrics.issues) {
+        const last30Opened = metrics.issues.data.series.reduce((sum, s) => sum + (s[1] || 0), 0);
+        const last30Closed = metrics.issues.data.series.reduce((sum, s) => sum + (s[2] || 0), 0);
+        const netChange = last30Opened - last30Closed;
+        const trend = netChange > 0 ? `📈 +${netChange}` : netChange < 0 ? `📉 ${netChange}` : '➡️ stable';
+        metricsGrid.appendChild(createMetricCard(
+          'Issue Backlog',
+          metrics.stats.data.openIssues,
+          `${trend} in last 30d`,
+          null
+        ));
+      }
+
+      if (metricsGrid.children.length > 0) {
+        metricsGrid.style.display = 'grid';
+      }
+    }
 
     function classifyLine(text) {
       if (text.includes('✓')) return 'line-ok';
@@ -61,12 +227,17 @@
 
     form.onsubmit = async (e) => {
       e.preventDefault();
-      output.style.display = 'none';
-      error.textContent = '';
+      
+      // Reset
+      Object.keys(metrics).forEach(k => delete metrics[k]);
+      promptSection.style.display = 'none';
+      errorDiv.style.display = 'none';
+      metricsGrid.style.display = 'none';
+      repoInfo.style.display = 'none';
       progressLog.innerHTML = '';
       progressLog.style.display = 'block';
-      loading.style.display = 'block';
-      form.querySelector('button').disabled = true;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = 'Fetching<span class="loading-spinner"></span>';
 
       try {
         const repoVal = encodeURIComponent(input.value.trim());
@@ -88,9 +259,8 @@
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
 
-          // Parse SSE events from buffer
           const parts = buffer.split('\n\n');
-          buffer = parts.pop(); // keep incomplete chunk
+          buffer = parts.pop();
 
           for (const part of parts) {
             let eventType = 'message';
@@ -105,6 +275,9 @@
               const parsed = JSON.parse(data);
               if (eventType === 'progress') {
                 appendProgress(parsed);
+              } else if (eventType === 'metrics') {
+                metrics[parsed.type] = parsed;
+                updateDashboard();
               } else if (eventType === 'done') {
                 finalPrompt = parsed;
               } else if (eventType === 'error') {
@@ -114,21 +287,22 @@
           }
         }
 
-        loading.style.display = 'none';
-
         if (gotError) {
-          error.textContent = gotError;
+          errorDiv.textContent = gotError;
+          errorDiv.style.display = 'block';
         } else if (finalPrompt) {
           output.textContent = finalPrompt;
-          output.style.display = 'block';
+          promptSection.style.display = 'block';
         } else {
-          error.textContent = 'No output received';
+          errorDiv.textContent = 'No output received';
+          errorDiv.style.display = 'block';
         }
       } catch (err) {
-        loading.style.display = 'none';
-        error.textContent = err.message || 'Request failed';
+        errorDiv.textContent = err.message || 'Request failed';
+        errorDiv.style.display = 'block';
       } finally {
-        form.querySelector('button').disabled = false;
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Generate';
       }
     };
   </script>

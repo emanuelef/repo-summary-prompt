@@ -89,17 +89,89 @@ async function main() {
 
   // Run all API calls sequentially to avoid rate-limiting and excessive token usage
   const stats = await tracked("stats", () => fetchStats(repo));
+
+  // Emit stats metrics for UI dashboard
+  if (stats) {
+    console.error(`@@METRICS@@${JSON.stringify({
+      type: "stats",
+      data: {
+        stars: stats.Stars,
+        forks: stats.Forks,
+        openIssues: stats.OpenIssues,
+        language: stats.Language,
+        created: stats.CreatedAt,
+        archived: stats.Archived,
+        size: stats.Size,
+        mentionableUsers: stats.MentionableUsers,
+        description: stats.Description || "",
+      }
+    })}`);
+  }
+
   const starsData = await tracked("stars", () => fetchStars(repo));
+  if (starsData?.stars?.length) {
+    // Skip last day (partial data if early in UTC day)
+    const full = starsData.stars.slice(0, -1);
+    console.error(`@@METRICS@@${JSON.stringify({
+      type: "stars",
+      data: { series: full.slice(-30), total: full.length > 0 ? full[full.length - 1][2] : 0 }
+    })}`);
+  }
+
   const commitsData = await tracked("commits", () => fetchCommits(repo));
+  if (commitsData?.commits?.length) {
+    const full = commitsData.commits.slice(0, -1);
+    console.error(`@@METRICS@@${JSON.stringify({
+      type: "commits",
+      data: { series: full.slice(-30), total: full.length > 0 ? full[full.length - 1][2] : 0 }
+    })}`);
+  }
+
   const prsData = await tracked("PRs", () => fetchPRs(repo));
+  if (prsData?.prs?.length) {
+    // PRs: [date, opened, closed, merged, openedCumul, closedCumul, mergedCumul, ?, ?]
+    const last30 = prsData.prs.slice(0, -1).slice(-30);
+    console.error(`@@METRICS@@${JSON.stringify({
+      type: "prs",
+      data: { series: last30.map((e: any) => [e[0], e[1], e[2], e[3]]) }
+    })}`);
+  }
+
   const issuesData = await tracked("issues", () => fetchIssues(repo));
+  if (issuesData?.issues?.length) {
+    const last30 = issuesData.issues.slice(0, -1).slice(-30);
+    console.error(`@@METRICS@@${JSON.stringify({
+      type: "issues",
+      data: { series: last30.map((e: any) => [e[0], e[1], e[2]]) }
+    })}`);
+  }
+
   const forksData = await tracked("forks", () => fetchForks(repo));
+  if (forksData?.forks?.length) {
+    const full = forksData.forks.slice(0, -1);
+    console.error(`@@METRICS@@${JSON.stringify({
+      type: "forks",
+      data: { series: full.slice(-30), total: full.length > 0 ? full[full.length - 1][2] : 0 }
+    })}`);
+  }
+
   const contributorsData = await tracked("contributors", () => fetchContributors(repo));
+  if (contributorsData?.contributors?.length) {
+    const full = contributorsData.contributors.slice(0, -1);
+    console.error(`@@METRICS@@${JSON.stringify({
+      type: "contributors",
+      data: { series: full.slice(-30), total: full.length > 0 ? full[full.length - 1][2] : 0 }
+    })}`);
+  }
+
   const ghMentionsData = await tracked("GH mentions", () => fetchGHMentions(repo));
   const hnData = await tracked("HackerNews", () => fetchHNMentions(searchQuery));
-  const redditData = await tracked("Reddit", () => fetchRedditMentions(searchQuery));
+  const redditData = await tracked("Reddit", () => fetchRedditMentions(repo));
   const youtubeData = await tracked("YouTube", () => fetchYouTubeMentions(searchQuery));
   const releasesData = await tracked("releases", () => fetchReleases(repo));
+
+  // Signal that all metrics have been sent
+  console.error(`@@METRICS@@${JSON.stringify({ type: "complete" })}`);
 
   // Summarize
   const stars = starsData ? summarizeStars(starsData) : null;

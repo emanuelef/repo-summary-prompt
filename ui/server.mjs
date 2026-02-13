@@ -43,7 +43,14 @@ app.get('/api/prompt', async (c) => {
         child.stderr.on('data', (chunk) => {
           const lines = chunk.toString().split('\n').filter(Boolean);
           for (const line of lines) {
-            send('progress', line);
+            if (line.startsWith('@@METRICS@@')) {
+              try {
+                const payload = JSON.parse(line.slice('@@METRICS@@'.length));
+                send('metrics', payload);
+              } catch {}
+            } else {
+              send('progress', line);
+            }
           }
         });
 
