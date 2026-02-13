@@ -14,12 +14,19 @@ app.get('/', async (c) => {
 // Serve static assets (if any)
 app.get('/favicon.ico', (c) => c.body('', 204));
 
+// Validate repo format: must be owner/repo with safe characters only
+function sanitizeRepo(str) {
+  const cleaned = str.trim().replace(/^https:\/\/github.com\//, '').replace(/\/$/, '');
+  if (!/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/.test(cleaned)) return null;
+  return cleaned;
+}
+
 // API endpoint — streams progress via SSE, then sends the final prompt
 app.get('/api/prompt', async (c) => {
   const repo = c.req.query('repo');
   if (!repo) return c.json({ error: 'Missing repo' }, 400);
-  let repoStr = repo.trim().replace(/^https:\/\/github.com\//, '').replace(/\/$/, '');
-  if (!repoStr.includes('/')) return c.json({ error: 'Invalid repo format' }, 400);
+  const repoStr = sanitizeRepo(repo);
+  if (!repoStr) return c.json({ error: 'Invalid repo format. Use owner/repo' }, 400);
 
   return new Response(
     new ReadableStream({
@@ -83,8 +90,8 @@ app.get('/api/prompt', async (c) => {
 app.post('/api/prompt', async (c) => {
   const { repo } = await c.req.json();
   if (!repo) return c.json({ error: 'Missing repo' }, 400);
-  let repoStr = repo.trim().replace(/^https:\/\/github.com\//, '').replace(/\/$/, '');
-  if (!repoStr.includes('/')) return c.json({ error: 'Invalid repo format' }, 400);
+  const repoStr = sanitizeRepo(repo);
+  if (!repoStr) return c.json({ error: 'Invalid repo format. Use owner/repo' }, 400);
 
   return new Promise((resolve) => {
     const child = spawn('npx', ['tsx', 'src/index.ts', repoStr], {

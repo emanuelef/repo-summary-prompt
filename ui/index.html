@@ -11,60 +11,91 @@
     .container { max-width: 1200px; margin: auto; }
     .header { background: #fff; padding: 2em; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); margin-bottom: 2em; }
     h1 { margin: 0 0 1em 0; color: #333; font-size: 2em; }
+    h1 a { color: inherit; text-decoration: none; }
     .search-bar { display: flex; gap: 0.5em; }
     .search-bar input { flex: 1; font-size: 1.1em; padding: 0.8em 1em; border: 2px solid #e0e0e0; border-radius: 8px; outline: none; transition: border 0.2s; }
     .search-bar input:focus { border-color: #667eea; }
-    .search-bar button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; border-radius: 8px; padding: 0.8em 2em; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+    .search-bar button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; border-radius: 8px; padding: 0.8em 2em; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; white-space: nowrap; }
     .search-bar button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
     .search-bar button:disabled { opacity: 0.6; cursor: not-allowed; }
     
-    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5em; margin-bottom: 2em; }
-    .metric-card { background: #fff; padding: 1.5em; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s; }
-    .metric-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
-    .metric-title { font-size: 0.9em; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5em; font-weight: 600; }
-    .metric-value { font-size: 2.2em; font-weight: 700; color: #333; margin-bottom: 0.5em; }
-    .metric-chart { height: 60px; margin-top: 1em; display: flex; align-items: flex-end; gap: 2px; }
-    .metric-bar { flex: 1; background: linear-gradient(to top, #667eea, #a78bfa); border-radius: 2px 2px 0 0; min-height: 2px; transition: all 0.3s; }
+    .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2em; margin-top: 1.5em; margin-bottom: 2em; }
+    @media (max-width: 960px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .metrics-grid { grid-template-columns: 1fr; } }
+    .metric-card { background: #fff; padding: 1.2em 1.4em; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s; }
+    .metric-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+    .metric-title { font-size: 0.8em; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.3em; font-weight: 600; }
+    .metric-value { font-size: 2em; font-weight: 700; color: #333; }
+    .metric-chart { height: 50px; margin-top: 0.8em; display: flex; align-items: flex-end; gap: 1px; }
+    .metric-bar { flex: 1; background: linear-gradient(to top, #667eea, #a78bfa); border-radius: 2px 2px 0 0; min-height: 2px; transition: all 0.3s; position: relative; }
     .metric-bar:hover { opacity: 0.7; }
-    .metric-subtitle { font-size: 0.85em; color: #666; margin-top: 0.5em; }
+    .metric-subtitle { font-size: 0.82em; color: #666; margin-top: 0.3em; }
     
-    .repo-info { background: #fff; padding: 1.5em; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); margin-bottom: 2em; }
-    .repo-info h2 { margin: 0 0 0.5em 0; font-size: 1.5em; color: #333; }
-    .repo-info p { margin: 0.3em 0; color: #666; }
-    .repo-tags { display: flex; gap: 0.5em; flex-wrap: wrap; margin-top: 1em; }
-    .repo-tag { background: #f0f0f0; padding: 0.3em 0.8em; border-radius: 20px; font-size: 0.85em; color: #555; }
+    .repo-info { background: #fff; padding: 1.5em; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); margin-bottom: 0; }
+    .repo-info h2 { margin: 0 0 0.4em 0; font-size: 1.4em; color: #333; }
+    .repo-info h2 a { color: #667eea; text-decoration: none; }
+    .repo-info h2 a:hover { text-decoration: underline; }
+    .repo-info p { margin: 0.3em 0; color: #666; font-size: 0.95em; }
+    .repo-tags { display: flex; gap: 0.5em; flex-wrap: wrap; margin-top: 0.8em; }
+    .repo-tag { background: #f0f0f0; padding: 0.3em 0.8em; border-radius: 20px; font-size: 0.82em; color: #555; }
     
-    #progressLog { background: #1e1e2e; color: #c8d6e5; padding: 1em; border-radius: 12px; font-family: 'SF Mono', Monaco, monospace; font-size: 0.9em; max-height: 200px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 2em; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+    .progress-wrapper { margin-bottom: 2em; }
+    .progress-toggle { background: none; border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 0.4em 1em; border-radius: 8px; cursor: pointer; font-size: 0.85em; margin-bottom: 0.5em; display: flex; align-items: center; gap: 0.5em; }
+    .progress-toggle:hover { background: rgba(255,255,255,0.1); }
+    #progressLog { background: #1e1e2e; color: #c8d6e5; padding: 1em; border-radius: 12px; font-family: 'SF Mono', Monaco, 'Consolas', monospace; font-size: 0.85em; max-height: 180px; overflow-y: auto; white-space: pre-wrap; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
     #progressLog .line-ok { color: #2ecc71; }
     #progressLog .line-fail { color: #e74c3c; }
     #progressLog .line-info { color: #74b9ff; }
     #progressLog .line-retry { color: #fdcb6e; }
     
-    .prompt-section { background: #fff; padding: 2em; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
-    .prompt-section h2 { margin: 0 0 1em 0; color: #333; }
-    pre { background: #f8f9fa; color: #333; padding: 1.5em; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; border: 1px solid #e0e0e0; margin: 0; font-size: 0.9em; line-height: 1.6; }
+    .prompt-section { background: #fff; padding: 2em; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); margin-bottom: 2em; }
+    .prompt-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1em; }
+    .prompt-section h2 { margin: 0; color: #333; }
+    .copy-btn { background: #667eea; color: #fff; border: none; padding: 0.5em 1.2em; border-radius: 6px; font-size: 0.85em; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4em; }
+    .copy-btn:hover { background: #5568d3; transform: translateY(-1px); }
+    .copy-btn.copied { background: #2ecc71; }
+    pre { background: #f8f9fa; color: #333; padding: 1.5em; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; border: 1px solid #e0e0e0; margin: 0; font-size: 0.85em; line-height: 1.5; max-height: 500px; overflow-y: auto; }
     .error { color: #e74c3c; margin-top: 1em; background: #fee; padding: 1em; border-radius: 8px; border-left: 4px solid #e74c3c; }
-    .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; margin-left: 0.5em; }
+    .loading-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; margin-left: 0.4em; vertical-align: middle; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .elapsed { font-size: 0.8em; color: rgba(255,255,255,0.7); margin-top: 0.3em; }
+    .footer { text-align: center; color: rgba(255,255,255,0.5); font-size: 0.8em; margin-top: 2em; }
+    .footer a { color: rgba(255,255,255,0.7); }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>📊 Repo Summary Prompt</h1>
+      <h1><a href="/">📊 Repo Summary Prompt</a></h1>
       <form id="repoForm" class="search-bar">
-        <input type="text" id="repoInput" placeholder="owner/repo or full GitHub URL" required />
+        <input type="text" id="repoInput" placeholder="owner/repo or https://github.com/owner/repo" required autocomplete="off" spellcheck="false" />
         <button type="submit" id="submitBtn">Generate</button>
       </form>
+      <p style="color:rgba(255,255,255,0.55);font-size:0.82em;margin:0.6em 0 0;">⏳ Large or very active repos may take 10–30 minutes to fetch all metrics.</p>
     </div>
 
     <div id="repoInfo" style="display:none;"></div>
     <div id="metricsGrid" class="metrics-grid" style="display:none;"></div>
-    <div id="progressLog" style="display:none;"></div>
+    <div class="progress-wrapper">
+      <div id="elapsedTimer" class="elapsed" style="display:none;"></div>
+      <button id="progressToggle" class="progress-toggle" style="display:none;">
+        <span id="toggleArrow">▼</span> Fetch log
+      </button>
+      <div id="progressLog" style="display:none;"></div>
+    </div>
     <div id="error" class="error" style="display:none;"></div>
     <div id="promptSection" class="prompt-section" style="display:none;">
-      <h2>Generated Prompt</h2>
+      <div class="prompt-header">
+        <h2>Generated Prompt</h2>
+        <button id="copyBtn" class="copy-btn">
+          <span id="copyIcon">📋</span>
+          <span id="copyText">Copy</span>
+        </button>
+      </div>
       <pre id="output"></pre>
+    </div>
+    <div class="footer">
+      Powered by <a href="https://github.com/emanuelef/daily-stars-explorer" target="_blank">Daily Stars Explorer</a>
     </div>
   </div>
   <script>
@@ -75,28 +106,79 @@
     const metricsGrid = document.getElementById('metricsGrid');
     const output = document.getElementById('output');
     const progressLog = document.getElementById('progressLog');
+    const progressToggle = document.getElementById('progressToggle');
+    const toggleArrow = document.getElementById('toggleArrow');
     const promptSection = document.getElementById('promptSection');
     const errorDiv = document.getElementById('error');
+    const elapsedTimer = document.getElementById('elapsedTimer');
 
     const isGhPages = location.hostname.endsWith('github.io');
     const apiBase = isGhPages ? 'https://YOUR_SERVER_HOST:3000' : '';
 
     const metrics = {};
+    let timerInterval = null;
+    let progressVisible = true;
 
-    function fmt(n) {
-      return n?.toLocaleString?.('en-US') || '0';
+    // Elapsed timer
+    function startTimer() {
+      const start = Date.now();
+      elapsedTimer.style.display = 'block';
+      elapsedTimer.textContent = '⏱ 0s elapsed';
+      timerInterval = setInterval(() => {
+        const s = Math.floor((Date.now() - start) / 1000);
+        const m = Math.floor(s / 60);
+        elapsedTimer.textContent = m > 0 ? `⏱ ${m}m ${s % 60}s elapsed` : `⏱ ${s}s elapsed`;
+      }, 1000);
+    }
+    function stopTimer() {
+      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
     }
 
-    function createMetricCard(title, value, subtitle, series) {
+    // Progress log toggle
+    progressToggle.addEventListener('click', () => {
+      progressVisible = !progressVisible;
+      progressLog.style.display = progressVisible ? 'block' : 'none';
+      toggleArrow.textContent = progressVisible ? '▼' : '▶';
+    });
+
+    // Copy to clipboard
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      const text = output.textContent;
+      const btn = document.getElementById('copyBtn');
+      const icon = document.getElementById('copyIcon');
+      const btnText = document.getElementById('copyText');
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.classList.add('copied');
+        icon.textContent = '✓';
+        btnText.textContent = 'Copied!';
+        setTimeout(() => { btn.classList.remove('copied'); icon.textContent = '📋'; btnText.textContent = 'Copy'; }, 2000);
+      } catch {
+        btnText.textContent = 'Failed';
+        setTimeout(() => { btnText.textContent = 'Copy'; }, 2000);
+      }
+    });
+
+    function fmt(n) {
+      if (n == null) return '0';
+      if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+      if (n >= 10_000) return (n / 1_000).toFixed(1) + 'k';
+      return n.toLocaleString('en-US');
+    }
+
+    function createMetricCard(title, value, subtitle, series, color) {
       const card = document.createElement('div');
       card.className = 'metric-card';
+      const grad = color || 'linear-gradient(to top, #667eea, #a78bfa)';
       
       let chart = '';
       if (series?.length) {
-        const max = Math.max(...series.map(s => s[1] || 0), 1);
+        const vals = series.map(s => s[1] || 0);
+        const max = Math.max(...vals, 1);
         const bars = series.map(s => {
-          const height = ((s[1] || 0) / max) * 100;
-          return `<div class="metric-bar" style="height: ${height}%" title="${s[0]}: ${s[1]}"></div>`;
+          const v = s[1] || 0;
+          const height = (v / max) * 100;
+          return `<div class="metric-bar" style="height:${height}%;background:${grad}" title="${s[0]}: ${v}"></div>`;
         }).join('');
         chart = `<div class="metric-chart">${bars}</div>`;
       }
@@ -110,16 +192,23 @@
       return card;
     }
 
+    function sum30(series, idx) {
+      return (series || []).reduce((s, e) => s + ((e[idx] || 0)), 0);
+    }
+
     function updateDashboard() {
       // Repo info
       if (metrics.stats) {
         const s = metrics.stats;
+        const repoPath = input.value.trim().replace(/^https:\/\/github.com\//, '').replace(/\/$/, '');
+        const created = s.data.created && !s.data.created.startsWith('0001') ? new Date(s.data.created).toISOString().split('T')[0] : '';
         repoInfo.innerHTML = `
-          <h2>${s.data.stars ? '⭐' : '📦'} ${input.value.trim()}</h2>
+          <h2><a href="https://github.com/${repoPath}" target="_blank">${repoPath}</a></h2>
           ${s.data.description ? `<p>${s.data.description}</p>` : ''}
           <div class="repo-tags">
             ${s.data.language ? `<span class="repo-tag">🔹 ${s.data.language}</span>` : ''}
-            ${s.data.archived ? '<span class="repo-tag" style="background:#fee;">⚠️ Archived</span>' : ''}
+            ${created ? `<span class="repo-tag">📅 ${created}</span>` : ''}
+            ${s.data.archived ? '<span class="repo-tag" style="background:#fee;color:#c00;">⚠️ Archived</span>' : ''}
             <span class="repo-tag">📦 ${(s.data.size / 1024).toFixed(1)} MB</span>
             <span class="repo-tag">👥 ${fmt(s.data.mentionableUsers)} users</span>
           </div>
@@ -130,77 +219,84 @@
       // Metrics cards
       metricsGrid.innerHTML = '';
       
-      if (metrics.stats) {
+      if (metrics.stars || metrics.stats) {
+        const daily30 = sum30(metrics.stars?.data.series, 1);
         metricsGrid.appendChild(createMetricCard(
-          'Total Stars',
-          metrics.stats.data.stars,
-          metrics.stars?.data.series?.length ? `Last 30 days trend` : '',
-          metrics.stars?.data.series
+          'Stars',
+          metrics.stats?.data.stars || metrics.stars?.data.total || 0,
+          daily30 ? `+${fmt(daily30)} in last 30 days` : '',
+          metrics.stars?.data.series,
+          'linear-gradient(to top, #f7971e, #ffd200)'
         ));
       }
 
       if (metrics.commits) {
-        const total = metrics.commits.data.total;
-        const last30 = metrics.commits.data.series.reduce((sum, s) => sum + (s[1] || 0), 0);
+        const last30 = sum30(metrics.commits.data.series, 1);
         metricsGrid.appendChild(createMetricCard(
           'Commits',
-          total,
-          `${last30} in last 30 days`,
-          metrics.commits.data.series
+          metrics.commits.data.total,
+          `${fmt(last30)} in last 30 days`,
+          metrics.commits.data.series,
+          'linear-gradient(to top, #11998e, #38ef7d)'
         ));
       }
 
       if (metrics.prs) {
-        const opened = metrics.prs.data.series.reduce((sum, s) => sum + (s[1] || 0), 0);
-        const merged = metrics.prs.data.series.reduce((sum, s) => sum + (s[3] || 0), 0);
+        const opened = sum30(metrics.prs.data.series, 1);
+        const merged = sum30(metrics.prs.data.series, 3);
         metricsGrid.appendChild(createMetricCard(
           'Pull Requests (30d)',
           opened,
-          `${merged} merged`,
-          metrics.prs.data.series.map(s => [s[0], s[1]])
+          `${fmt(merged)} merged`,
+          metrics.prs.data.series.map(s => [s[0], s[1]]),
+          'linear-gradient(to top, #667eea, #764ba2)'
         ));
       }
 
       if (metrics.issues) {
-        const opened = metrics.issues.data.series.reduce((sum, s) => sum + (s[1] || 0), 0);
-        const closed = metrics.issues.data.series.reduce((sum, s) => sum + (s[2] || 0), 0);
+        const opened = sum30(metrics.issues.data.series, 1);
+        const closed = sum30(metrics.issues.data.series, 2);
         metricsGrid.appendChild(createMetricCard(
           'Issues (30d)',
           opened,
-          `${closed} closed`,
-          metrics.issues.data.series.map(s => [s[0], s[1]])
+          `${fmt(closed)} closed`,
+          metrics.issues.data.series.map(s => [s[0], s[1]]),
+          'linear-gradient(to top, #fc5c7d, #e74c3c)'
         ));
       }
 
-      if (metrics.stats) {
+      if (metrics.forks || metrics.stats) {
+        const daily30 = sum30(metrics.forks?.data.series, 1);
         metricsGrid.appendChild(createMetricCard(
           'Forks',
-          metrics.stats.data.forks,
-          metrics.forks?.data.series?.length ? 'Last 30 days trend' : '',
-          metrics.forks?.data.series
+          metrics.stats?.data.forks || metrics.forks?.data.total || 0,
+          daily30 ? `+${fmt(daily30)} in last 30 days` : '',
+          metrics.forks?.data.series,
+          'linear-gradient(to top, #4facfe, #00f2fe)'
         ));
       }
 
       if (metrics.contributors) {
         const total = metrics.contributors.data.total;
-        const last30 = metrics.contributors.data.series.reduce((sum, s) => sum + (s[1] || 0), 0);
+        const last30 = sum30(metrics.contributors.data.series, 1);
         metricsGrid.appendChild(createMetricCard(
           'Contributors',
           total,
-          `${last30} active in last 30 days`,
-          metrics.contributors.data.series
+          last30 ? `${fmt(last30)} active in last 30d` : '',
+          metrics.contributors.data.series,
+          'linear-gradient(to top, #a18cd1, #fbc2eb)'
         ));
       }
 
       if (metrics.stats && metrics.issues) {
-        const last30Opened = metrics.issues.data.series.reduce((sum, s) => sum + (s[1] || 0), 0);
-        const last30Closed = metrics.issues.data.series.reduce((sum, s) => sum + (s[2] || 0), 0);
-        const netChange = last30Opened - last30Closed;
-        const trend = netChange > 0 ? `📈 +${netChange}` : netChange < 0 ? `📉 ${netChange}` : '➡️ stable';
+        const last30Opened = sum30(metrics.issues.data.series, 1);
+        const last30Closed = sum30(metrics.issues.data.series, 2);
+        const net = last30Opened - last30Closed;
+        const trend = net > 0 ? `📈 +${net}` : net < 0 ? `📉 ${net}` : '➡️ stable';
         metricsGrid.appendChild(createMetricCard(
           'Issue Backlog',
           metrics.stats.data.openIssues,
-          `${trend} in last 30d`,
+          `${trend} net in last 30d`,
           null
         ));
       }
@@ -225,6 +321,14 @@
       progressLog.scrollTop = progressLog.scrollHeight;
     }
 
+    // Support URL query param: ?repo=owner/repo
+    const urlParams = new URLSearchParams(location.search);
+    if (urlParams.get('repo')) {
+      input.value = urlParams.get('repo');
+      // Auto-submit after load
+      requestAnimationFrame(() => form.dispatchEvent(new Event('submit')));
+    }
+
     form.onsubmit = async (e) => {
       e.preventDefault();
       
@@ -233,15 +337,23 @@
       promptSection.style.display = 'none';
       errorDiv.style.display = 'none';
       metricsGrid.style.display = 'none';
+      metricsGrid.innerHTML = '';
       repoInfo.style.display = 'none';
       progressLog.innerHTML = '';
       progressLog.style.display = 'block';
+      progressToggle.style.display = 'flex';
+      progressVisible = true;
+      toggleArrow.textContent = '▼';
       submitBtn.disabled = true;
       submitBtn.innerHTML = 'Fetching<span class="loading-spinner"></span>';
+      startTimer();
+
+      // Update URL without reload
+      const repoVal = input.value.trim();
+      history.replaceState(null, '', `?repo=${encodeURIComponent(repoVal)}`);
 
       try {
-        const repoVal = encodeURIComponent(input.value.trim());
-        const res = await fetch(`${apiBase}/api/prompt?repo=${repoVal}`);
+        const res = await fetch(`${apiBase}/api/prompt?repo=${encodeURIComponent(repoVal)}`);
 
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
@@ -287,17 +399,24 @@
           }
         }
 
+        stopTimer();
+
         if (gotError) {
           errorDiv.textContent = gotError;
           errorDiv.style.display = 'block';
         } else if (finalPrompt) {
           output.textContent = finalPrompt;
           promptSection.style.display = 'block';
+          // Auto-collapse progress log when done
+          progressVisible = false;
+          progressLog.style.display = 'none';
+          toggleArrow.textContent = '▶';
         } else {
           errorDiv.textContent = 'No output received';
           errorDiv.style.display = 'block';
         }
       } catch (err) {
+        stopTimer();
         errorDiv.textContent = err.message || 'Request failed';
         errorDiv.style.display = 'block';
       } finally {
