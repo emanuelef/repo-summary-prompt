@@ -45,8 +45,19 @@ app.get('/api/prompt', async (c) => {
     new ReadableStream({
       start(controller) {
         const enc = new TextEncoder();
+        let closed = false;
+        
         const send = (event, data) => {
-          controller.enqueue(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+          if (!closed) {
+            controller.enqueue(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+          }
+        };
+        
+        const closeController = () => {
+          if (!closed) {
+            closed = true;
+            controller.close();
+          }
         };
 
         const child = spawn('npx', ['tsx', 'src/index.ts', repoStr], {
@@ -80,7 +91,7 @@ app.get('/api/prompt', async (c) => {
         child.on('error', (err) => {
           activeChild = null;
           send('error', err.message);
-          controller.close();
+          closeController();
         });
 
         child.on('close', (code) => {
@@ -94,7 +105,7 @@ app.get('/api/prompt', async (c) => {
           } else {
             send('done', stdout);
           }
-          controller.close();
+          closeController();
         });
       },
     }),
