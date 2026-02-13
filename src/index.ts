@@ -26,6 +26,8 @@ import {
   summarizeYouTube,
   summarizeReleases,
   computeEvolution,
+  analyzeGovernance,
+  analyzeBuzz,
 } from "./summarize.js";
 import { buildPrompt } from "./prompt.js";
 
@@ -187,6 +189,18 @@ async function main() {
   const youtube = youtubeData ? summarizeYouTube(youtubeData) : null;
   const releases = releasesData ? summarizeReleases(releasesData) : null;
 
+  // Governance & Buzz analysis
+  const governance = analyzeGovernance({ stats, contributors, commits, prs, ghMentions: ghMentionsData });
+  const buzz = analyzeBuzz({ hn, reddit, youtube, ghMentions, commits, stats });
+
+  // Emit governance & buzz metrics for UI
+  if (governance) {
+    console.error(`@@METRICS@@${JSON.stringify({ type: "governance", data: governance })}`);
+  }
+  if (buzz) {
+    console.error(`@@METRICS@@${JSON.stringify({ type: "buzz", data: buzz })}`);
+  }
+
   // Compute evolution / momentum analysis
   const evolution = computeEvolution({ stars, commits, prs, issues, forks, activity, releases });
 
@@ -207,6 +221,8 @@ async function main() {
     youtube,
     releases,
     evolution,
+    governance,
+    buzz,
   });
 
   console.log(prompt);

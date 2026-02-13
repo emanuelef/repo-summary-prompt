@@ -202,11 +202,27 @@
         const s = metrics.stats;
         const repoPath = input.value.trim().replace(/^https:\/\/github.com\//, '').replace(/\/$/, '');
         const created = s.data.created && !s.data.created.startsWith('0001') ? new Date(s.data.created).toISOString().split('T')[0] : '';
+        let ageTag = '';
+        if (created) {
+          const c = new Date(s.data.created);
+          const now = new Date();
+          let y = now.getFullYear() - c.getFullYear();
+          let m = now.getMonth() - c.getMonth();
+          let d = now.getDate() - c.getDate();
+          if (d < 0) { m--; d += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
+          if (m < 0) { y--; m += 12; }
+          const parts = [];
+          if (y > 0) parts.push(`${y}y`);
+          if (m > 0) parts.push(`${m}m`);
+          if (d > 0 || parts.length === 0) parts.push(`${d}d`);
+          ageTag = `<span class="repo-tag">⏳ ${parts.join(' ')}</span>`;
+        }
         repoInfo.innerHTML = `
           <h2><a href="https://github.com/${repoPath}" target="_blank">${repoPath}</a></h2>
           ${s.data.description ? `<p>${s.data.description}</p>` : ''}
           <div class="repo-tags">
             ${s.data.language ? `<span class="repo-tag">🔹 ${s.data.language}</span>` : ''}
+            ${ageTag}
             ${created ? `<span class="repo-tag">📅 ${created}</span>` : ''}
             ${s.data.archived ? '<span class="repo-tag" style="background:#fee;color:#c00;">⚠️ Archived</span>' : ''}
             <span class="repo-tag">📦 ${(s.data.size / 1024).toFixed(1)} MB</span>
@@ -299,6 +315,53 @@
           `${trend} net in last 30d`,
           null
         ));
+      }
+
+      // Governance card
+      if (metrics.governance) {
+        const g = metrics.governance.data;
+        const card = document.createElement('div');
+        card.className = 'metric-card';
+        card.innerHTML = `
+          <div class="metric-title">Governance</div>
+          <div class="metric-value" style="font-size:1.5em;">${g.icon} ${g.label}</div>
+          <div class="metric-subtitle">${g.description}</div>
+          <div style="margin-top:0.8em;display:flex;gap:0.5em;flex-wrap:wrap;">
+            <span class="repo-tag">✍️ ${g.differentAuthors} authors</span>
+            <span class="repo-tag">🎯 ${g.authorConcentration}</span>
+            <span class="repo-tag">🕐 ${g.recentContributors} active (30d)</span>
+          </div>
+        `;
+        metricsGrid.appendChild(card);
+      }
+
+      // Buzz / Social Activity card
+      if (metrics.buzz) {
+        const b = metrics.buzz.data;
+        const card = document.createElement('div');
+        card.className = 'metric-card';
+        const barWidth = Math.min(b.score, 100);
+        const barColor = b.score >= 70 ? '#e74c3c' : b.score >= 45 ? '#f39c12' : b.score >= 25 ? '#3498db' : '#95a5a6';
+        let breakdownHtml = '';
+        const parts = [];
+        if (b.breakdown.hn?.posts) parts.push(`HN: ${b.breakdown.hn.posts} posts (${fmt(b.breakdown.hn.points)} pts)`);
+        if (b.breakdown.reddit?.posts) parts.push(`Reddit: ${b.breakdown.reddit.posts} posts`);
+        if (b.breakdown.youtube?.videos) parts.push(`YT: ${b.breakdown.youtube.videos} videos`);
+        if (b.breakdown.ghMentions?.total) parts.push(`GH: ${b.breakdown.ghMentions.total} refs`);
+        if (parts.length) breakdownHtml = `<div style="margin-top:0.5em;font-size:0.78em;color:#888;">${parts.join(' · ')}</div>`;
+        const ratioTag = b.devActivityRatio === 'balanced' ? '' :
+          `<div style="margin-top:0.5em;"><span class="repo-tag" style="background:${b.devActivityRatio.includes('talked') ? '#fff3cd' : '#d4edda'};color:${b.devActivityRatio.includes('talked') ? '#856404' : '#155724'};">${b.devActivityRatio}</span></div>`;
+        card.innerHTML = `
+          <div class="metric-title">Social Buzz</div>
+          <div class="metric-value" style="font-size:1.5em;">${b.icon} ${b.label}</div>
+          <div class="metric-subtitle">Score: ${b.score}/100 · ${fmt(b.totalMentions)} mentions${b.recentMentions ? ` (${b.recentMentions} recent)` : ''}</div>
+          <div style="margin-top:0.6em;background:#f0f0f0;border-radius:6px;height:8px;overflow:hidden;">
+            <div style="width:${barWidth}%;height:100%;background:${barColor};border-radius:6px;transition:width 0.5s;"></div>
+          </div>
+          ${breakdownHtml}
+          ${ratioTag}
+        `;
+        metricsGrid.appendChild(card);
       }
 
       if (metricsGrid.children.length > 0) {

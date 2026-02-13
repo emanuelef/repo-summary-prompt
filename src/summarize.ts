@@ -491,3 +491,237 @@ export function summarizeReleases(releases: Release[]): ReleasesSummary {
     avgDaysBetweenReleases: avgDays,
   };
 }
+
+// --- Governance / Leadership Analysis ---
+
+export type GovernanceType =
+  | "solo"
+  | "solo-with-contributors"
+  | "benevolent-dictator"
+  | "small-team"
+  | "community-driven";
+
+export interface GovernanceSummary {
+  type: GovernanceType;
+  label: string;
+  icon: string;
+  description: string;
+  differentAuthors: number;
+  mentionableUsers: number;
+  recentContributors: number;
+  authorConcentration: "very high" | "high" | "moderate" | "distributed";
+}
+
+export function analyzeGovernance(opts: {
+  stats: RepoStats | null;
+  contributors: TimeSeriesSummary | null;
+  commits: TimeSeriesSummary | null;
+  prs: PRSummary | null;
+  ghMentions: GHMentionsResponse | null;
+}): GovernanceSummary | null {
+  if (!opts.stats) return null;
+
+  const diffAuthors = opts.stats.DifferentAuthors || 0;
+  const mentionableUsers = opts.stats.MentionableUsers || 0;
+  const recentContributors = opts.contributors?.last30Days || 0;
+
+  // Unique PR authors from GH mentions (authors who filed PRs/issues across the ecosystem referencing this repo)
+  const uniqueMentionAuthors = new Set<string>();
+  if (opts.ghMentions?.mentions) {
+    for (const m of opts.ghMentions.mentions) {
+      if (m.Author) uniqueMentionAuthors.add(m.Author);
+    }
+  }
+
+  // Author concentration: how concentrated are commits per author
+  let authorConcentration: GovernanceSummary["authorConcentration"];
+  const totalCommits = opts.commits?.total || 0;
+  if (diffAuthors <= 1) {
+    authorConcentration = "very high";
+  } else if (diffAuthors <= 3) {
+    authorConcentration = "high";
+  } else if (diffAuthors <= 15) {
+    authorConcentration = "moderate";
+  } else {
+    authorConcentration = "distributed";
+  }
+
+  // Classify governance type
+  let type: GovernanceType;
+  let label: string;
+  let icon: string;
+  let description: string;
+
+  if (diffAuthors <= 1) {
+    type = "solo";
+    label = "Solo Project";
+    icon = "👤";
+    description = "This repository is maintained by a single developer.";
+  } else if (diffAuthors <= 3 && mentionableUsers <= 5) {
+    type = "solo-with-contributors";
+    label = "Solo + Contributors";
+    icon = "👤+";
+    description = `Primarily a solo effort with ${diffAuthors} total contributors. Occasional outside contributions.`;
+  } else if (diffAuthors <= 10 && mentionableUsers <= 15) {
+    // Potential benevolent dictator: small number of authors, moderate community
+    // Check if contributions are concentrated
+    if (totalCommits > 0 && diffAuthors >= 2 && recentContributors <= 5) {
+      type = "benevolent-dictator";
+      label = "Benevolent Dictator";
+      icon = "👑";
+      description = `Led by a core maintainer with ${diffAuthors} total authors. A small group drives most decisions.`;
+    } else {
+      type = "small-team";
+      label = "Small Team";
+      icon = "👥";
+      description = `Maintained by a small team of ${diffAuthors} contributors with ${mentionableUsers} members.`;
+    }
+  } else if (diffAuthors <= 25) {
+    if (mentionableUsers > 50 || recentContributors > 10) {
+      type = "community-driven";
+      label = "Community-Driven";
+      icon = "🌍";
+      description = `Broad contributor base with ${diffAuthors} authors and ${mentionableUsers} members. Development is distributed.`;
+    } else {
+      type = "small-team";
+      label = "Small Team";
+      icon = "👥";
+      description = `Maintained by a team of ${diffAuthors} contributors.`;
+    }
+  } else {
+    type = "community-driven";
+    label = "Community-Driven";
+    icon = "🌍";
+    description = `Large contributor base with ${diffAuthors} authors and ${mentionableUsers} members. Truly community-driven development.`;
+  }
+
+  return {
+    type,
+    label,
+    icon,
+    description,
+    differentAuthors: diffAuthors,
+    mentionableUsers,
+    recentContributors,
+    authorConcentration,
+  };
+}
+
+// --- Buzz / Social Activity Analysis ---
+
+export type BuzzLevel =
+  | "viral"
+  | "trending"
+  | "discussed"
+  | "niche"
+  | "under-the-radar";
+
+export interface BuzzSummary {
+  level: BuzzLevel;
+  label: string;
+  icon: string;
+  score: number;
+  description: string;
+  breakdown: {
+    hn: { posts: number; points: number; recent: number } | null;
+    reddit: { posts: number; upvotes: number; recent: number } | null;
+    youtube: { videos: number; views: number } | null;
+    ghMentions: { total: number; recent: number } | null;
+  };
+  totalMentions: number;
+  recentMentions: number;
+  devActivityRatio: "more talked about than developed" | "more developed than talked about" | "balanced";
+}
+
+export function analyzeBuzz(opts: {
+  hn: HNSummary | null;
+  reddit: RedditSummary | null;
+  youtube: YouTubeSummary | null;
+  ghMentions: GHMentionsSummary | null;
+  commits: TimeSeriesSummary | null;
+  stats: RepoStats | null;
+}): BuzzSummary {
+  // Weighted score components
+  const hnPosts = opts.hn?.totalPosts || 0;
+  const hnPoints = opts.hn?.totalPoints || 0;
+  const hnRecent = opts.hn?.recentPosts || 0;
+  const redditPosts = opts.reddit?.totalPosts || 0;
+  const redditUpvotes = opts.reddit?.totalUpvotes || 0;
+  const redditRecent = opts.reddit?.recentPosts || 0;
+  const ytVideos = opts.youtube?.totalVideos || 0;
+  const ytViews = opts.youtube?.totalViews || 0;
+  const ghTotal = opts.ghMentions?.totalMentions || 0;
+  const ghRecent = opts.ghMentions?.recentMentions || 0;
+
+  // Compute a composite buzz score (0-100 scale, roughly)
+  // Weight: HN is high-signal, Reddit medium, YouTube medium, GH mentions low (they're dev-to-dev)
+  let score = 0;
+  score += Math.min(hnPosts * 3, 15);           // up to 15 for having many HN posts
+  score += Math.min(hnPoints / 50, 15);          // up to 15 for high HN engagement
+  score += Math.min(hnRecent * 5, 10);           // up to 10 for recent HN activity
+  score += Math.min(redditPosts * 2, 10);        // up to 10 for Reddit posts
+  score += Math.min(redditUpvotes / 100, 10);    // up to 10 for Reddit engagement
+  score += Math.min(redditRecent * 3, 5);        // up to 5 for recent Reddit
+  score += Math.min(ytVideos * 2, 10);           // up to 10 for YouTube coverage
+  score += Math.min(ytViews / 10000, 10);        // up to 10 for YouTube views
+  score += Math.min(ghTotal / 10, 10);           // up to 10 for GH cross-mentions
+  score += Math.min(ghRecent * 2, 5);            // up to 5 for recent GH mentions
+  score = Math.round(Math.min(score, 100));
+
+  const totalMentions = hnPosts + redditPosts + ytVideos + ghTotal;
+  const recentMentions = hnRecent + redditRecent + ghRecent;
+
+  // Classify buzz level
+  let level: BuzzLevel;
+  let label: string;
+  let icon: string;
+  if (score >= 70) {
+    level = "viral"; label = "Viral"; icon = "🔥";
+  } else if (score >= 45) {
+    level = "trending"; label = "Trending"; icon = "📈";
+  } else if (score >= 25) {
+    level = "discussed"; label = "Discussed"; icon = "💬";
+  } else if (score >= 10) {
+    level = "niche"; label = "Niche"; icon = "🔍";
+  } else {
+    level = "under-the-radar"; label = "Under the Radar"; icon = "🤫";
+  }
+
+  // Compare social buzz to dev activity
+  const recentCommits = opts.commits?.last30Days || 0;
+  let devActivityRatio: BuzzSummary["devActivityRatio"];
+  if (recentMentions > 5 && recentCommits < 10) {
+    devActivityRatio = "more talked about than developed";
+  } else if (recentCommits > 50 && recentMentions <= 2) {
+    devActivityRatio = "more developed than talked about";
+  } else {
+    devActivityRatio = "balanced";
+  }
+
+  // Build description
+  const parts: string[] = [];
+  if (hnPosts > 0) parts.push(`${hnPosts} HN post${hnPosts > 1 ? "s" : ""} (${hnPoints} pts)`);
+  if (redditPosts > 0) parts.push(`${redditPosts} Reddit post${redditPosts > 1 ? "s" : ""}`);
+  if (ytVideos > 0) parts.push(`${ytVideos} YouTube video${ytVideos > 1 ? "s" : ""}`);
+  if (ghTotal > 0) parts.push(`${ghTotal} GH mention${ghTotal > 1 ? "s" : ""}`);
+  const description = parts.length > 0
+    ? `${label}: ${parts.join(", ")}.${recentMentions > 0 ? ` ${recentMentions} recent.` : ""}`
+    : "No social mentions found across tracked platforms.";
+
+  return {
+    level,
+    label,
+    icon,
+    score,
+    description,
+    breakdown: {
+      hn: opts.hn ? { posts: hnPosts, points: hnPoints, recent: hnRecent } : null,
+      reddit: opts.reddit ? { posts: redditPosts, upvotes: redditUpvotes, recent: redditRecent } : null,
+      youtube: opts.youtube ? { videos: ytVideos, views: ytViews } : null,
+      ghMentions: opts.ghMentions ? { total: ghTotal, recent: ghRecent } : null,
+    },
+    totalMentions,
+    recentMentions,
+    devActivityRatio,
+  };
+}

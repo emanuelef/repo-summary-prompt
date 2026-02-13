@@ -11,6 +11,8 @@ import type {
   YouTubeSummary,
   ReleasesSummary,
   EvolutionSummary,
+  GovernanceSummary,
+  BuzzSummary,
 } from "./summarize.js";
 
 interface PromptData {
@@ -29,6 +31,8 @@ interface PromptData {
   youtube: YouTubeSummary | null;
   releases: ReleasesSummary | null;
   evolution: EvolutionSummary | null;
+  governance: GovernanceSummary | null;
+  buzz: BuzzSummary | null;
 }
 
 function fmt(n: number): string {
@@ -230,6 +234,37 @@ export function buildPrompt(data: PromptData): string {
     sections.push(lines.join("\n"));
   }
 
+  // --- Governance / Leadership Model ---
+  if (data.governance) {
+    const g = data.governance;
+    sections.push([
+      `## Project Governance`,
+      `- Type: **${g.label}** ${g.icon}`,
+      `- ${g.description}`,
+      `- Distinct commit authors: ${fmt(g.differentAuthors)}`,
+      `- Mentionable users: ${fmt(g.mentionableUsers)}`,
+      `- Recently active contributors (30d): ${fmt(g.recentContributors)}`,
+      `- Author concentration: ${g.authorConcentration}`,
+    ].join("\n"));
+  }
+
+  // --- Buzz / Social Activity ---
+  if (data.buzz) {
+    const b = data.buzz;
+    const lines = [
+      `## Social Buzz & Feed Activity`,
+      `- Buzz level: **${b.label}** ${b.icon} (score: ${b.score}/100)`,
+      `- Total social mentions: ${fmt(b.totalMentions)}`,
+      `- Recent mentions (last 90d): ${fmt(b.recentMentions)}`,
+      `- Dev-vs-buzz ratio: ${b.devActivityRatio}`,
+    ];
+    if (b.breakdown.hn) lines.push(`- Hacker News: ${b.breakdown.hn.posts} posts, ${fmt(b.breakdown.hn.points)} points, ${b.breakdown.hn.recent} recent`);
+    if (b.breakdown.reddit) lines.push(`- Reddit: ${b.breakdown.reddit.posts} posts, ${fmt(b.breakdown.reddit.upvotes)} upvotes, ${b.breakdown.reddit.recent} recent`);
+    if (b.breakdown.youtube) lines.push(`- YouTube: ${b.breakdown.youtube.videos} videos, ${fmt(b.breakdown.youtube.views)} views`);
+    if (b.breakdown.ghMentions) lines.push(`- GH cross-references: ${b.breakdown.ghMentions.total} total, ${b.breakdown.ghMentions.recent} recent`);
+    sections.push(lines.join("\n"));
+  }
+
   // --- Evolution / Momentum ---
   if (data.evolution) {
     const ev = data.evolution;
@@ -259,10 +294,12 @@ Based on all the data above, provide a comprehensive analysis of **how this proj
 1. **Trajectory Summary** — Is this project accelerating, cruising, decelerating, or stalling? Describe the overall direction in 2-3 sentences.
 2. **Development Velocity** — How has commit, PR, and release activity changed recently? Is the team shipping faster or slower?
 3. **Community & Adoption Trends** — Are stars, forks, and contributors growing? Is external interest (HN, Reddit, YouTube) rising or fading?
-4. **Maintenance Health** — Are issues being resolved? Is the PR merge rate healthy? Is the backlog under control?
-5. **Key Strengths** — What is going well for this project?
-6. **Key Risks & Concerns** — What signals suggest potential problems?
-7. **6-Month Outlook** — Based on current trends, what is this project likely to look like in 6 months?`);
+4. **Governance Model** — Is this a solo project, benevolent-dictator led, small-team, or community-driven? How does the contributor distribution affect project resilience and bus factor?
+5. **Social Buzz vs. Development** — Is the project more talked about than developed, or vice versa? Is external attention aligned with actual development pace?
+6. **Maintenance Health** — Are issues being resolved? Is the PR merge rate healthy? Is the backlog under control?
+7. **Key Strengths** — What is going well for this project?
+8. **Key Risks & Concerns** — What signals suggest potential problems?
+9. **6-Month Outlook** — Based on current trends, what is this project likely to look like in 6 months?`);
 
   return sections.join("\n\n");
 }
