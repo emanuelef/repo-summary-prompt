@@ -2,6 +2,9 @@
 
 CLI tool that fetches GitHub repo metrics from a stats API and generates a structured LLM prompt summarizing a project's health, momentum, and evolution trajectory.
 
+
+<img width="1262" height="2010" alt="screencapture-localhost-3000-2026-02-13-17_09_11" src="https://github.com/user-attachments/assets/19ab9dd0-6af5-4799-b67a-61e0255f0a6c" />
+
 ## What it does
 
 Given an `owner/repo`, the tool:
