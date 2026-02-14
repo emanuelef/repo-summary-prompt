@@ -122,7 +122,7 @@ async function main() {
     const full = starsData.stars.slice(0, -1);
     console.error(`@@METRICS@@${JSON.stringify({
       type: "stars",
-      data: { series: full.slice(-30), total: full.length > 0 ? full[full.length - 1][2] : 0 }
+      data: { series: full, total: full.length > 0 ? full[full.length - 1][2] : 0 }
     })}`);
   }
 
@@ -131,26 +131,26 @@ async function main() {
     const full = commitsData.commits.slice(0, -1);
     console.error(`@@METRICS@@${JSON.stringify({
       type: "commits",
-      data: { series: full.slice(-30), total: full.length > 0 ? full[full.length - 1][2] : 0 }
+      data: { series: full, total: full.length > 0 ? full[full.length - 1][2] : 0 }
     })}`);
   }
 
   const prsData = await tracked("PRs", () => fetchPRs(repo));
   if (prsData?.prs?.length) {
     // PRs: [date, opened, closed, merged, openedCumul, closedCumul, mergedCumul, ?, ?]
-    const last30 = prsData.prs.slice(0, -1).slice(-30);
+    const full = prsData.prs.slice(0, -1);
     console.error(`@@METRICS@@${JSON.stringify({
       type: "prs",
-      data: { series: last30.map((e: any) => [e[0], e[1], e[2], e[3]]) }
+      data: { series: full.map((e: any) => [e[0], e[1], e[2], e[3]]) }
     })}`);
   }
 
   const issuesData = await tracked("issues", () => fetchIssues(repo));
   if (issuesData?.issues?.length) {
-    const last30 = issuesData.issues.slice(0, -1).slice(-30);
+    const full = issuesData.issues.slice(0, -1);
     console.error(`@@METRICS@@${JSON.stringify({
       type: "issues",
-      data: { series: last30.map((e: any) => [e[0], e[1], e[2]]) }
+      data: { series: full.map((e: any) => [e[0], e[1], e[2]]) }
     })}`);
   }
 
@@ -159,7 +159,7 @@ async function main() {
     const full = forksData.forks.slice(0, -1);
     console.error(`@@METRICS@@${JSON.stringify({
       type: "forks",
-      data: { series: full.slice(-30), total: full.length > 0 ? full[full.length - 1][2] : 0 }
+      data: { series: full, total: full.length > 0 ? full[full.length - 1][2] : 0 }
     })}`);
   }
 
@@ -168,7 +168,7 @@ async function main() {
     const full = contributorsData.contributors.slice(0, -1);
     console.error(`@@METRICS@@${JSON.stringify({
       type: "contributors",
-      data: { series: full.slice(-30), total: full.length > 0 ? full[full.length - 1][2] : 0 }
+      data: { series: full, total: full.length > 0 ? full[full.length - 1][2] : 0 }
     })}`);
   }
 
