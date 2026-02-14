@@ -940,6 +940,16 @@
     });
 
     // ── Helpers ───────────────────────────────────────
+    // --- Repo sanitizer (matches backend logic) ---
+    function sanitizeRepo(str) {
+      return str.trim()
+        .replace(/\s+/g, '')
+        .replace(/^https?:\/\/(www\.)?github\.com\//, '')
+        .replace(/\/(tree|blob|issues|pulls|actions|releases|wiki|discussions|commits|tags)(\/.*)?$/, '')
+        .replace(/\.git$/, '')
+        .replace(/\/+$/, '');
+    }
+
     function fmt(n) {
       if (n == null) return '0';
       if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
@@ -981,7 +991,7 @@
       // Repo info
       if (metrics.stats) {
         const s = metrics.stats;
-        const repoPath = input.value.trim().replace(/^https:\/\/github.com\//, '').replace(/\/$/, '');
+        const repoPath = sanitizeRepo(input.value);
         const created = s.data.created && !s.data.created.startsWith('0001') ? new Date(s.data.created).toISOString().split('T')[0] : '';
         let ageTag = '';
         if (created) {
