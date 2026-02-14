@@ -294,20 +294,6 @@
     .metric-subtitle { font-size: 0.88em; color: var(--text-secondary); margin-top: 0.2em; }
 
     .metric-chart { height: 48px; margin-top: 0.8em; display: flex; align-items: flex-end; gap: 1px; }
-    .metric-chart-wrapper { position: relative; }
-    .chart-labels {
-      position: absolute;
-      left: -2.5em;
-      top: 0;
-      bottom: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      font-size: 0.7em;
-      color: var(--text-muted);
-      padding: 0.5em 0;
-    }
-    .chart-label-max, .chart-label-min { white-space: nowrap; }
     .metric-bar {
       flex: 1;
       border-radius: 2px 2px 0 0;
@@ -708,6 +694,9 @@
     // Chart view mode: '30d' or 'full'
     let chartViewMode = localStorage.getItem('chartViewMode') || '30d';
 
+    // Track if we've generated data for current repo (to show Update vs Generate button)
+    let hasGeneratedData = false;
+
     // ── Theme toggle ──────────────────────────────────
     const themeToggle = document.getElementById('themeToggle');
     function setTheme(theme) {
@@ -726,6 +715,7 @@
     document.querySelectorAll('.chart-view-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const view = btn.dataset.view;
+        console.log(`Chart view changing from ${chartViewMode} to ${view}`);
         chartViewMode = view;
         localStorage.setItem('chartViewMode', view);
         document.querySelectorAll('.chart-view-btn').forEach(b => b.classList.remove('active'));
@@ -737,6 +727,33 @@
     document.querySelectorAll('.chart-view-btn').forEach(btn => {
       if (btn.dataset.view === chartViewMode) btn.classList.add('active');
       else btn.classList.remove('active');
+    });
+
+    // ── Share button handler (event delegation since it's dynamically created) ──
+    document.addEventListener('click', async (e) => {
+      if (e.target.closest('#shareBtn')) {
+        e.preventDefault();
+        const btn = e.target.closest('#shareBtn');
+        const repo = sanitizeRepo(input.value);
+        const shareUrl = `${location.origin}${location.pathname}?repo=${encodeURIComponent(repo)}`;
+        
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          const originalText = btn.innerHTML;
+          btn.innerHTML = `<svg viewBox="0 0 16 16"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>Copied!`;
+          btn.style.background = 'rgba(34,211,238,0.25)';
+          setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.style.background = '';
+          }, 2000);
+        } catch (err) {
+          console.error('Failed to copy:', err);
+          btn.textContent = 'Failed to copy';
+          setTimeout(() => {
+            btn.innerHTML = `<svg viewBox="0 0 16 16"><path d="M13.5 3a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 5.5a2.5 2.5 0 00-3.5-2.29l-4.33 2.6a2.5 2.5 0 000 4.38l4.33 2.6A2.5 2.5 0 1014 11.5v-6A.5.5 0 0015 5.5zm-3.5 7.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM4.5 8a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>Share`;
+          }, 2000);
+        }
+      }
     });
 
     // ── Recent repos (localStorage) ───────────────────
@@ -1033,27 +1050,25 @@
       let chart = '';
       if (series?.length) {
         // Filter series based on chart view mode
-        let filteredSeries = series;
-        if (chartViewMode === '30d' && series.length > 30) {
-          filteredSeries = series.slice(-30);
+        let filteredSeries = [...series]; // Create a copy
+        const viewMode = chartViewMode; // Capture current mode
+        console.log(`[${title}] Total data points: ${series.length}, Mode: ${viewMode}`);
+        
+        if (viewMode === '30d' && filteredSeries.length > 30) {
+          filteredSeries = filteredSeries.slice(-30);
+          console.log(`[${title}] Filtered to last 30: ${filteredSeries.length} points`);
+        } else {
+          console.log(`[${title}] Showing all ${filteredSeries.length} points`);
         }
         
         const vals = filteredSeries.map(s => s[1] || 0);
         const max = Math.max(...vals, 1);
-        const min = Math.min(...vals);
         const bars = filteredSeries.map(s => {
           const v = s[1] || 0;
           const height = (v / max) * 100;
           return `<div class="metric-bar" style="height:${height}%;background:${grad}" title="${s[0]}: ${v}"></div>`;
         }).join('');
-        // Add value labels for max and min
-        const labels = max > 0 
-          ? `<div class="chart-labels">
-              <span class="chart-label-max">${fmt(max)}</span>
-              ${min < max ? `<span class="chart-label-min">${fmt(min)}</span>` : ''}
-            </div>` 
-          : '';
-        chart = `<div class="metric-chart-wrapper">${labels}<div class="metric-chart">${bars}</div></div>`;
+        chart = `<div class="metric-chart">${bars}</div>`;
       }
 
       card.innerHTML = `
@@ -1118,6 +1133,10 @@
               <svg viewBox="0 0 16 16"><path d="M1.5 14.25V1.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v12.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25zM3 3v4h2V3H3zm3 0v7h2V3H6zm3 0v5h2V3H9z"/></svg>
               Daily Stars Explorer
             </a>
+            <button id="shareBtn" class="repo-link" title="Copy shareable link to clipboard" style="cursor: pointer; border: 1px solid rgba(34,211,238,0.2);">
+              <svg viewBox="0 0 16 16"><path d="M13.5 3a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 5.5a2.5 2.5 0 00-3.5-2.29l-4.33 2.6a2.5 2.5 0 000 4.38l4.33 2.6A2.5 2.5 0 1014 11.5v-6A.5.5 0 0015 5.5zm-3.5 7.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM4.5 8a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
+              Share
+            </button>
           </div>
         `;
         repoInfo.style.display = 'block';
@@ -1300,6 +1319,18 @@
       requestAnimationFrame(() => form.dispatchEvent(new Event('submit')));
     }
 
+    // Reset hasGeneratedData when input changes to a different repo
+    let lastRepo = '';
+    input.addEventListener('input', () => {
+      const currentRepo = sanitizeRepo(input.value);
+      if (currentRepo !== lastRepo) {
+        hasGeneratedData = false;
+        submitBtn.textContent = 'Generate';
+        submitBtn.title = '';
+        lastRepo = currentRepo;
+      }
+    });
+
     // ── Form submit ───────────────────────────────────
     form.onsubmit = async (e) => {
       e.preventDefault();
@@ -1318,6 +1349,7 @@
       errorDiv.style.display = 'none';
       metricsGrid.style.display = 'none';
       metricsGrid.innerHTML = '';
+      chartViewToggle.style.display = 'none';
       repoInfo.style.display = 'none';
       progressLog.innerHTML = '';
       progressLog.style.display = 'block';
@@ -1326,6 +1358,10 @@
       toggleArrow.textContent = '▼';
       submitBtn.disabled = true;
       submitBtn.innerHTML = 'Fetching<span class="loading-spinner"></span>';
+      
+      // Add force parameter if this is an Update (refresh) request
+      const forceParam = hasGeneratedData ? '&force=true' : '';
+      
       initFetchTracker();
       showSkeleton();
       startTimer();
@@ -1342,7 +1378,7 @@
       addRecentRepo(repoVal);
 
       try {
-        const res = await fetch(`${apiBase}/api/prompt?repo=${encodeURIComponent(repoVal)}`, {
+        const res = await fetch(`${apiBase}/api/prompt?repo=${encodeURIComponent(repoVal)}${forceParam}`, {
           signal: currentAbort.signal,
         });
 
@@ -1431,7 +1467,14 @@
       } finally {
         currentAbort = null;
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Generate';
+        // Change button to "Update" after first successful generation
+        if (finalPrompt && !gotError) {
+          hasGeneratedData = true;
+          submitBtn.textContent = 'Update';
+          submitBtn.title = 'Fetch latest data (bypasses 1-day cache)';
+        } else {
+          submitBtn.textContent = hasGeneratedData ? 'Update' : 'Generate';
+        }
       }
     };
   </script>

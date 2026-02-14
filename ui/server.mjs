@@ -59,9 +59,12 @@ app.get('/api/prompt', async (c) => {
   const repoStr = sanitizeRepo(repo);
   if (!repoStr) return c.json({ error: 'Invalid repo format. Use owner/repo' }, 400);
 
-  // Check cache first
+  // Check if force refresh is requested
+  const forceRefresh = c.req.query('force') === 'true';
+
+  // Check cache first (unless force refresh)
   const cached = cache.get(repoStr);
-  if (isCacheValid(cached)) {
+  if (!forceRefresh && isCacheValid(cached)) {
     const enc = new TextEncoder();
     return new Response(
       new ReadableStream({
