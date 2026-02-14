@@ -184,6 +184,33 @@
     .recent-chip:hover .remove-recent { color: var(--danger); }
     .recent-chip .remove-recent:hover { background: rgba(248,113,113,0.2); color: var(--danger); }
 
+    /* ── Chart View Toggle ────────────────────────────── */
+    .chart-view-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.5em;
+      animation: fadeSlideIn 0.4s ease-out;
+    }
+    .chart-view-btn {
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-secondary);
+      padding: 0.5em 1em;
+      font-size: 0.85em;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    .chart-view-btn:first-of-type { border-radius: 8px 0 0 8px; border-right: none; }
+    .chart-view-btn:last-of-type { border-radius: 0 8px 8px 0; }
+    .chart-view-btn:hover { background: var(--toggle-hover); border-color: var(--accent); }
+    .chart-view-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
     /* ── Repo Info ───────────────────────────────────── */
     .repo-info {
       background: var(--card-bg);
@@ -267,6 +294,20 @@
     .metric-subtitle { font-size: 0.88em; color: var(--text-secondary); margin-top: 0.2em; }
 
     .metric-chart { height: 48px; margin-top: 0.8em; display: flex; align-items: flex-end; gap: 1px; }
+    .metric-chart-wrapper { position: relative; }
+    .chart-labels {
+      position: absolute;
+      left: -2.5em;
+      top: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-size: 0.7em;
+      color: var(--text-muted);
+      padding: 0.5em 0;
+    }
+    .chart-label-max, .chart-label-min { white-space: nowrap; }
     .metric-bar {
       flex: 1;
       border-radius: 2px 2px 0 0;
@@ -597,6 +638,13 @@
     </div>
 
     <div id="repoInfo" class="repo-info" style="display:none;"></div>
+    
+    <div id="chartViewToggle" class="chart-view-toggle" style="display:none;">
+      <span style="font-size:0.85em;color:var(--text-muted);margin-right:0.5em;">Chart view:</span>
+      <button class="chart-view-btn active" data-view="30d">Last 30 days</button>
+      <button class="chart-view-btn" data-view="full">Full history</button>
+    </div>
+    
     <div id="skeletonGrid" class="skeleton-grid" style="display:none;"></div>
     <div id="metricsGrid" class="metrics-grid" style="display:none;"></div>
 
@@ -657,6 +705,9 @@
     const isGhPages = location.hostname.endsWith('github.io');
     const apiBase = isGhPages ? 'https://emafuma.mywire.org:3000' : '';
 
+    // Chart view mode: '30d' or 'full'
+    let chartViewMode = localStorage.getItem('chartViewMode') || '30d';
+
     // ── Theme toggle ──────────────────────────────────
     const themeToggle = document.getElementById('themeToggle');
     function setTheme(theme) {
@@ -670,6 +721,23 @@
     });
     // Init theme from localStorage
     setTheme(localStorage.getItem('theme') || 'dark');
+
+    // ── Chart view toggle ─────────────────────────────
+    document.querySelectorAll('.chart-view-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        chartViewMode = view;
+        localStorage.setItem('chartViewMode', view);
+        document.querySelectorAll('.chart-view-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateDashboard(); // Refresh the charts
+      });
+    });
+    // Set initial active state
+    document.querySelectorAll('.chart-view-btn').forEach(btn => {
+      if (btn.dataset.view === chartViewMode) btn.classList.add('active');
+      else btn.classList.remove('active');
+    });
 
     // ── Recent repos (localStorage) ───────────────────
     function getRecentRepos() {
@@ -964,14 +1032,28 @@
 
       let chart = '';
       if (series?.length) {
-        const vals = series.map(s => s[1] || 0);
+        // Filter series based on chart view mode
+        let filteredSeries = series;
+        if (chartViewMode === '30d' && series.length > 30) {
+          filteredSeries = series.slice(-30);
+        }
+        
+        const vals = filteredSeries.map(s => s[1] || 0);
         const max = Math.max(...vals, 1);
-        const bars = series.map(s => {
+        const min = Math.min(...vals);
+        const bars = filteredSeries.map(s => {
           const v = s[1] || 0;
           const height = (v / max) * 100;
           return `<div class="metric-bar" style="height:${height}%;background:${grad}" title="${s[0]}: ${v}"></div>`;
         }).join('');
-        chart = `<div class="metric-chart">${bars}</div>`;
+        // Add value labels for max and min
+        const labels = max > 0 
+          ? `<div class="chart-labels">
+              <span class="chart-label-max">${fmt(max)}</span>
+              ${min < max ? `<span class="chart-label-min">${fmt(min)}</span>` : ''}
+            </div>` 
+          : '';
+        chart = `<div class="metric-chart-wrapper">${labels}<div class="metric-chart">${bars}</div></div>`;
       }
 
       card.innerHTML = `
@@ -1190,6 +1272,7 @@
 
       if (metricsGrid.children.length > 0) {
         metricsGrid.style.display = 'grid';
+        document.getElementById('chartViewToggle').style.display = 'flex';
         hideSkeleton();
       }
     }
