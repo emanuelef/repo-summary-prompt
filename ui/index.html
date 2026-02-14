@@ -1244,9 +1244,9 @@
       outputRaw.style.display = 'none';
 
       // Update URL without reload
-      const repoVal = input.value.trim();
+      const repoVal = sanitizeRepo(input.value);
       history.replaceState(null, '', `?repo=${encodeURIComponent(repoVal)}`);
-      addRecentRepo(repoVal.replace(/^https:\/\/github.com\//, '').replace(/\/$/, ''));
+      addRecentRepo(repoVal);
 
       try {
         const res = await fetch(`${apiBase}/api/prompt?repo=${encodeURIComponent(repoVal)}`, {
