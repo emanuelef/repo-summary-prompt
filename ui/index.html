@@ -715,7 +715,6 @@
     document.querySelectorAll('.chart-view-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const view = btn.dataset.view;
-        console.log(`Chart view changing from ${chartViewMode} to ${view}`);
         chartViewMode = view;
         localStorage.setItem('chartViewMode', view);
         document.querySelectorAll('.chart-view-btn').forEach(b => b.classList.remove('active'));
@@ -1052,13 +1051,9 @@
         // Filter series based on chart view mode
         let filteredSeries = [...series]; // Create a copy
         const viewMode = chartViewMode; // Capture current mode
-        console.log(`[${title}] Total data points: ${series.length}, Mode: ${viewMode}`);
         
         if (viewMode === '30d' && filteredSeries.length > 30) {
           filteredSeries = filteredSeries.slice(-30);
-          console.log(`[${title}] Filtered to last 30: ${filteredSeries.length} points`);
-        } else {
-          console.log(`[${title}] Showing all ${filteredSeries.length} points`);
         }
         
         const vals = filteredSeries.map(s => s[1] || 0);
@@ -1377,6 +1372,9 @@
       history.replaceState(null, '', `?repo=${encodeURIComponent(repoVal)}`);
       addRecentRepo(repoVal);
 
+      let finalPrompt = null;
+      let gotError = null;
+
       try {
         const res = await fetch(`${apiBase}/api/prompt?repo=${encodeURIComponent(repoVal)}${forceParam}`, {
           signal: currentAbort.signal,
@@ -1390,8 +1388,6 @@
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
-        let finalPrompt = null;
-        let gotError = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -1423,7 +1419,7 @@
                 const localMidnight = new Date(expiresAt.getTime());
                 const localResetTime = localMidnight.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
                 appendProgress(`⚡ Serving cached results (fetched ${fmtDate(cachedAt)} ${fmtTime(cachedAt)} UTC)`);
-                appendProgress(`📅 Data resets daily at 00:00 UTC (${localResetTime} your time, UTC${sign}${localOffset}). Star counts update after reset.`);
+                appendProgress(`📅 Cache resets daily at 00:00 UTC (${localResetTime} your time). Click "Update" to force refresh.`);
               } else if (eventType === 'progress') {
                 appendProgress(parsed);
               } else if (eventType === 'metrics') {
