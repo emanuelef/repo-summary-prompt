@@ -579,6 +579,7 @@
         <span class="recent-label">Recent:</span>
       </div>
       <p class="hint">Large or very active repos may take 10-30 minutes to fetch all metrics.</p>
+      <p class="hint" style="margin-top:0.5em;opacity:0.7;">⚠️ This service uses a shared GitHub API token and may hit rate limits during peak usage. For unlimited access, <a href="https://github.com/emanuelef/repo-summary-prompt" target="_blank" style="color:inherit;text-decoration:underline;">self-host your own instance</a>.</p>
     </div>
 
     <div id="fetchTracker" class="fetch-tracker" style="display:none;">
@@ -632,7 +633,7 @@
     </div>
 
     <div class="footer">
-      Powered by <a href="https://emanuelef.github.io/daily-stars-explorer" target="_blank">Daily Stars Explorer</a> · <a href="https://github.com/emanuelef/daily-stars-explorer" target="_blank">Source</a>
+      Powered by <a href="https://emanuelef.github.io/daily-stars-explorer" target="_blank">Daily Stars Explorer</a> · <a href="https://github.com/emanuelef/repo-summary-prompt" target="_blank">Self-host</a> · <a href="https://github.com/emanuelef/daily-stars-explorer" target="_blank">Source</a>
     </div>
   </div>
 
@@ -966,7 +967,7 @@
       card.innerHTML = `
         <div class="metric-title">${title}</div>
         <div class="metric-value">${fmt(value)}</div>
-        ${subtitle ? `<div class="metric-subtitle">${subtitle}</div>` : ''}
+        ${subtitle ? `<div class="metric-subtitle">${subtitle.split('\n').join('<br>')}</div>` : ''}
         ${chart}
       `;
       return card;
@@ -1035,12 +1036,23 @@
       metricsGrid.innerHTML = '';
 
       if (metrics.stars || metrics.stats) {
-        const daily30 = sum30(metrics.stars?.data.series, 1);
+        const series = metrics.stars?.data.series;
+        const daily30 = sum30(series, 1);
+        // Show today's and yesterday's stars (series is sorted by date, last entries are most recent)
+        let todayYesterday = '';
+        if (series && series.length >= 2) {
+          const today = series[series.length - 1];
+          const yesterday = series[series.length - 2];
+          todayYesterday = `Today (UTC): +${fmt(today[1])} · Yesterday: +${fmt(yesterday[1])}`;
+        } else if (series && series.length === 1) {
+          todayYesterday = `Today (UTC): +${fmt(series[0][1])}`;
+        }
+        const subtitle = [todayYesterday, daily30 ? `+${fmt(daily30)} in last 30 days` : ''].filter(Boolean).join('\n');
         metricsGrid.appendChild(createMetricCard(
           'Stars',
           metrics.stats?.data.stars || metrics.stars?.data.total || 0,
-          daily30 ? `+${fmt(daily30)} in last 30 days` : '',
-          metrics.stars?.data.series,
+          subtitle,
+          series,
           'linear-gradient(to top, #f59e0b, #fbbf24)'
         ));
       }
@@ -1271,7 +1283,19 @@
 
             try {
               const parsed = JSON.parse(data);
-              if (eventType === 'progress') {
+              if (eventType === 'cache') {
+                // Show cached data notice
+                const cachedAt = new Date(parsed.cachedAt);
+                const expiresAt = new Date(parsed.expiresAt);
+                const fmtTime = (d) => d.toLocaleString('en-GB', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit', hour12: false });
+                const fmtDate = (d) => d.toLocaleString('en-GB', { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' });
+                const localOffset = -(new Date().getTimezoneOffset() / 60);
+                const sign = localOffset >= 0 ? '+' : '';
+                const localMidnight = new Date(expiresAt.getTime());
+                const localResetTime = localMidnight.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+                appendProgress(`⚡ Serving cached results (fetched ${fmtDate(cachedAt)} ${fmtTime(cachedAt)} UTC)`);
+                appendProgress(`📅 Data resets daily at 00:00 UTC (${localResetTime} your time, UTC${sign}${localOffset}). Star counts update after reset.`);
+              } else if (eventType === 'progress') {
                 appendProgress(parsed);
               } else if (eventType === 'metrics') {
                 metrics[parsed.type] = parsed;

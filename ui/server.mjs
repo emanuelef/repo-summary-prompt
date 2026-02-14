@@ -26,7 +26,11 @@ app.get('/favicon.ico', (c) => c.body('', 204));
 
 // Validate repo format: must be owner/repo with safe characters only
 function sanitizeRepo(str) {
-  const cleaned = str.trim().replace(/^https:\/\/github.com\//, '').replace(/\/$/, '');
+  const cleaned = str.trim()
+    .replace(/^https?:\/\/(www\.)?github\.com\//, '')
+    .replace(/\/(tree|blob|issues|pulls|actions|releases|wiki|discussions|commits|tags)(\/.*)?$/, '')
+    .replace(/\.git$/, '')
+    .replace(/\/+$/, '');
   if (!/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/.test(cleaned)) return null;
   return cleaned;
 }
@@ -34,12 +38,57 @@ function sanitizeRepo(str) {
 // Only one CLI process at a time to avoid GitHub rate-limit exhaustion
 let activeChild = null;
 
+// ── In-memory cache: results are valid until midnight UTC ─────────────
+// Each entry: { events: [{ event, data }], cachedAt: Date }
+const cache = new Map();
+
+function getUTCMidnight() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+function isCacheValid(entry) {
+  if (!entry) return false;
+  return entry.cachedAt >= getUTCMidnight();
+}
+
 // API endpoint — streams progress via SSE, then sends the final prompt
 app.get('/api/prompt', async (c) => {
   const repo = c.req.query('repo');
   if (!repo) return c.json({ error: 'Missing repo' }, 400);
   const repoStr = sanitizeRepo(repo);
   if (!repoStr) return c.json({ error: 'Invalid repo format. Use owner/repo' }, 400);
+
+  // Check cache first
+  const cached = cache.get(repoStr);
+  if (isCacheValid(cached)) {
+    const enc = new TextEncoder();
+    return new Response(
+      new ReadableStream({
+        start(controller) {
+          // Send cache metadata first
+          const cacheInfo = {
+            cached: true,
+            cachedAt: cached.cachedAt.toISOString(),
+            expiresAt: new Date(getUTCMidnight().getTime() + 86400000).toISOString(),
+          };
+          controller.enqueue(enc.encode(`event: cache\ndata: ${JSON.stringify(cacheInfo)}\n\n`));
+          // Replay all cached events
+          for (const ev of cached.events) {
+            controller.enqueue(enc.encode(`event: ${ev.event}\ndata: ${JSON.stringify(ev.data)}\n\n`));
+          }
+          controller.close();
+        },
+      }),
+      {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+        },
+      },
+    );
+  }
 
   // Kill any in-flight CLI process before starting a new one
   if (activeChild) {
@@ -49,6 +98,7 @@ app.get('/api/prompt', async (c) => {
 
   let closed = false;
   let child = null;
+  const recordedEvents = [];
 
   return new Response(
     new ReadableStream({
@@ -59,6 +109,10 @@ app.get('/api/prompt', async (c) => {
           if (closed) return;
           try {
             controller.enqueue(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+            // Record events for caching (skip progress lines)
+            if (event !== 'progress') {
+              recordedEvents.push({ event, data });
+            }
           } catch {
             closed = true;
           }
@@ -116,6 +170,8 @@ app.get('/api/prompt', async (c) => {
             send('error', msg);
           } else {
             send('done', stdout);
+            // Cache successful results until midnight UTC
+            cache.set(repoStr, { events: recordedEvents, cachedAt: new Date() });
           }
           closeController();
         });
