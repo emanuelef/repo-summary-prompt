@@ -1,9 +1,15 @@
 import { Hono } from 'hono';
+import { cors } from '@hono/cors';
 import { serve } from '@hono/node-server';
 import { spawn } from 'child_process';
 import { readFile } from 'fs/promises';
 
 const app = new Hono();
+
+// Enable CORS for all routes
+app.use('*', cors({
+  origin: '*', // You can restrict this to your frontend domain if needed
+}));
 
 // Serve static index.html at root
 app.get('/', async (c) => {
