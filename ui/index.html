@@ -286,6 +286,8 @@
       box-shadow: var(--shadow);
       transition: transform 0.2s, border-color 0.2s;
       animation: fadeSlideIn 0.4s ease-out both;
+      overflow: hidden;
+      min-width: 0;
     }
     .metric-card:hover { border-color: var(--card-hover-border); transform: translateY(-2px); }
 
@@ -293,7 +295,7 @@
     .metric-value { font-size: 2em; font-weight: 700; color: var(--text-primary); line-height: 1.1; }
     .metric-subtitle { font-size: 0.88em; color: var(--text-secondary); margin-top: 0.2em; }
 
-    .metric-chart { height: 48px; margin-top: 0.8em; display: flex; align-items: flex-end; gap: 1px; }
+    .metric-chart { height: 48px; margin-top: 0.8em; display: flex; align-items: flex-end; gap: 1px; overflow: hidden; }
     .metric-bar {
       flex: 1;
       border-radius: 2px 2px 0 0;
@@ -1056,19 +1058,39 @@
       let chart = '';
       if (series?.length) {
         // Filter series based on chart view mode
-        let filteredSeries = [...series]; // Create a copy
-        const viewMode = chartViewMode; // Capture current mode
-        
-        if (viewMode === '30d' && filteredSeries.length > 30) {
-          filteredSeries = filteredSeries.slice(-30);
+        let filteredSeries = series;
+        if (chartViewMode === '30d' && series.length > 30) {
+          filteredSeries = series.slice(-30);
         }
         
-        const vals = filteredSeries.map(s => s[1] || 0);
-        const max = Math.max(...vals, 1);
+        // Downsample if too many points - use weekly averages for readability
+        const MAX_BARS = 60;
+        let isDownsampled = false;
+        if (filteredSeries.length > MAX_BARS) {
+          isDownsampled = true;
+          const bucketSize = Math.ceil(filteredSeries.length / MAX_BARS);
+          const downsampled = [];
+          for (let i = 0; i < filteredSeries.length; i += bucketSize) {
+            const bucket = filteredSeries.slice(i, i + bucketSize);
+            const avgVal = bucket.reduce((sum, s) => sum + (s[1] || 0), 0) / bucket.length;
+            const firstDate = bucket[0][0];
+            const lastDate = bucket[bucket.length - 1][0];
+            const label = bucket.length > 1 ? `${firstDate} to ${lastDate}` : firstDate;
+            downsampled.push([label, Math.round(avgVal)]);
+          }
+          filteredSeries = downsampled;
+        }
+        
+        let max = 1;
+        for (let i = 0; i < filteredSeries.length; i++) {
+          const v = filteredSeries[i][1] || 0;
+          if (v > max) max = v;
+        }
         const bars = filteredSeries.map(s => {
           const v = s[1] || 0;
           const height = (v / max) * 100;
-          return `<div class="metric-bar" style="height:${height}%;background:${grad}" title="${s[0]}: ${v}"></div>`;
+          const tip = isDownsampled ? `${s[0]} (avg: ${v})` : `${s[0]}: ${v}`;
+          return `<div class="metric-bar" style="height:${height}%;background:${grad}" title="${tip}"></div>`;
         }).join('');
         chart = `<div class="metric-chart">${bars}</div>`;
       }
@@ -1083,7 +1105,9 @@
     }
 
     function sum30(series, idx) {
-      return (series || []).reduce((s, e) => s + ((e[idx] || 0)), 0);
+      if (!series || series.length === 0) return 0;
+      const last30 = series.slice(-30);
+      return last30.reduce((s, e) => s + ((e[idx] || 0)), 0);
     }
 
     function updateDashboard() {
