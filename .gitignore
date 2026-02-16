@@ -4,6 +4,5 @@ dist/
 *.d.ts
 *.js.map
 !src/**
-!ui/*.js
 .env
 .DS_Store
