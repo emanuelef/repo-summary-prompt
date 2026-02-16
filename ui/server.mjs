@@ -3,6 +3,8 @@ import { cors } from 'hono/cors';
 import { serve } from '@hono/node-server';
 import { spawn } from 'child_process';
 import { readFile } from 'fs/promises';
+import { fileURLToPath } from 'url';
+import path from 'path';
 
 const app = new Hono();
 
@@ -11,10 +13,27 @@ app.use('*', cors({
   origin: '*', // You can restrict this to your frontend domain if needed
 }));
 
-// Serve static index.html at root
+const baseDir = fileURLToPath(new URL('.', import.meta.url));
+
+// Serve static assets (html / css / js)
 app.get('/', async (c) => {
   const html = await readFile(new URL('./index.html', import.meta.url));
   return c.html(html.toString());
+});
+
+app.get('/:asset', async (c) => {
+  const asset = c.req.param('asset');
+  const allowed = new Set(['styles.css', 'main.js']);
+  if (!allowed.has(asset)) return c.notFound();
+
+  const absPath = path.join(baseDir, asset);
+  try {
+    const data = await readFile(absPath);
+    const type = asset.endsWith('.css') ? 'text/css' : 'application/javascript';
+    return c.body(data, 200, { 'Content-Type': type });
+  } catch {
+    return c.notFound();
+  }
 });
 
 
