@@ -656,6 +656,9 @@
       // Ollama AI analysis section
       if (metrics.ollama) {
         const { response, model } = metrics.ollama.data;
+        const promptHtml = metrics.ollamaPrompt
+          ? `<details class="ollama-prompt-details"><summary>Prompt sent to Ollama</summary><pre class="ollama-prompt-pre">${metrics.ollamaPrompt.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></details>`
+          : '';
         ollamaSection.innerHTML = `
           <div class="ollama-header">
             <div class="ollama-title">
@@ -664,6 +667,7 @@
             </div>
           </div>
           <div class="ollama-content">${response.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+          ${promptHtml}
         `;
         ollamaSection.style.display = 'block';
       }
@@ -829,7 +833,11 @@
                 showPromptNow(finalPrompt);
               } else if (eventType === 'ollama-pending') {
                 // Server started Ollama — show loading state
-                const { model } = parsed;
+                const { model, prompt: ollamaPrompt } = parsed;
+                if (ollamaPrompt) metrics.ollamaPrompt = ollamaPrompt;
+                const promptHtml = ollamaPrompt
+                  ? `<details class="ollama-prompt-details"><summary>Prompt sent to Ollama</summary><pre class="ollama-prompt-pre">${ollamaPrompt.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre></details>`
+                  : '';
                 ollamaSection.innerHTML = `
                   <div class="ollama-header">
                     <div class="ollama-title">
@@ -842,6 +850,7 @@
                     <span style="display:inline-block;width:12px;height:12px;border:2px solid var(--accent-glow);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;"></span>
                     Waiting for Ollama...
                   </div>
+                  ${promptHtml}
                 `;
                 ollamaSection.style.display = 'block';
               } else if (eventType === 'error') {

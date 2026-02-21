@@ -231,6 +231,27 @@ async function main() {
     buzz,
   });
 
+  // Emit a compact prompt for Ollama (avoids timeouts on small local models)
+  {
+    const s30 = (arr: any[] | undefined | null, i: number): number =>
+      arr ? arr.slice(-30).reduce((t: number, e: any) => t + (Number(e[i]) || 0), 0) : 0;
+    const lines = [
+      `Repository: ${repo}`,
+      stats?.Description ? `Description: ${stats.Description}` : "",
+      `Language: ${stats?.Language || "unknown"}`,
+      `Stars: ${(stats?.Stars || 0).toLocaleString()} (+${s30(starsData?.stars, 1)} in last 30d)`,
+      `Forks: ${(stats?.Forks || 0).toLocaleString()} (+${s30(forksData?.forks, 1)} in last 30d)`,
+      `Commits (30d): ${s30(commitsData?.commits, 1)}`,
+      `Pull Requests (30d): ${s30(prsData?.prs, 1)} opened, ${s30(prsData?.prs, 3)} merged`,
+      `Issues (30d): ${s30(issuesData?.issues, 1)} opened, ${s30(issuesData?.issues, 2)} closed (${stats?.OpenIssues || 0} currently open)`,
+      `Active contributors (30d): ${s30(contributorsData?.contributors, 1)}`,
+      governance ? `Governance: ${governance.label} — ${governance.description}` : "",
+      buzz ? `Social buzz: ${buzz.label} (score: ${buzz.score}/100, ${buzz.totalMentions} total mentions)` : "",
+    ].filter(Boolean).join("\n");
+    const ollamaPrompt = `Analyze this GitHub repository:\n\n${lines}\n\nIn 3-4 concise sentences, summarize its current health, development momentum, and any notable trends.`;
+    console.error(`@@METRICS@@${JSON.stringify({ type: "ollama-prompt", data: ollamaPrompt })}`);
+  }
+
   console.log(prompt);
 }
 

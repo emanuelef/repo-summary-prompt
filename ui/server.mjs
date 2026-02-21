@@ -137,6 +137,7 @@ app.get('/api/prompt', async (c) => {
 
   let closed = false;
   let child = null;
+  let ollamaPromptText = null;
   const recordedEvents = [];
 
   return new Response(
@@ -184,7 +185,11 @@ app.get('/api/prompt', async (c) => {
             if (line.startsWith('@@METRICS@@')) {
               try {
                 const payload = JSON.parse(line.slice('@@METRICS@@'.length));
-                send('metrics', payload);
+                if (payload.type === 'ollama-prompt') {
+                  ollamaPromptText = payload.data;
+                } else {
+                  send('metrics', payload);
+                }
               } catch {}
             } else {
               send('progress', line);
@@ -220,7 +225,7 @@ app.get('/api/prompt', async (c) => {
             && !!process.env.OLLAMA_MODEL;
 
           if (ollamaEnabled) {
-            send('ollama-pending', { model: process.env.OLLAMA_MODEL });
+            send('ollama-pending', { model: process.env.OLLAMA_MODEL, prompt: ollamaPromptText });
 
             // Send SSE keepalive comments every 30s to prevent proxy idle-timeout
             // (Ollama can take 10-15 min on a slow VM)
@@ -232,7 +237,7 @@ app.get('/api/prompt', async (c) => {
               }
             }, 30000);
 
-            const ollamaResult = await callOllama(stdout);
+            const ollamaResult = await callOllama(ollamaPromptText ?? stdout.slice(0, 4000));
             clearInterval(keepalive);
 
             if (ollamaResult && !closed) {
