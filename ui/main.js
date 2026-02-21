@@ -666,6 +666,7 @@
               ${model ? `<span class="ollama-model-tag">${model}</span>` : ''}
             </div>
           </div>
+          <div class="ollama-disclaimer">⚠️ This analysis runs on a lightweight local model hosted on a simple VM — results may be limited. For a deeper and more accurate investigation, copy the full prompt above and paste it into your LLM of choice (ChatGPT, Claude, Gemini…).</div>
           <div class="ollama-content">${response.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
           ${promptHtml}
         `;
@@ -846,6 +847,7 @@
                     </div>
                     <span style="font-size:0.82em;color:var(--text-muted);">Running analysis, this may take a while...</span>
                   </div>
+                  <div class="ollama-disclaimer">⚠️ This analysis runs on a lightweight local model hosted on a simple VM — results may be limited. For a deeper and more accurate investigation, copy the full prompt above and paste it into your LLM of choice (ChatGPT, Claude, Gemini…).</div>
                   <div class="ollama-content" style="display:flex;align-items:center;gap:0.6em;min-height:60px;opacity:0.5;">
                     <span style="display:inline-block;width:12px;height:12px;border:2px solid var(--accent-glow);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;"></span>
                     Waiting for Ollama...

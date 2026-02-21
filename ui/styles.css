@@ -605,6 +605,13 @@
       font-size: 0.78em;
       font-weight: 500;
     }
+    .ollama-disclaimer {
+      font-size: 0.78em;
+      color: var(--text-muted);
+      opacity: 0.75;
+      margin-bottom: 0.75em;
+      line-height: 1.5;
+    }
     .ollama-content {
       background: var(--prompt-bg);
       border: 1px solid var(--log-border);
