@@ -484,7 +484,7 @@
             ${created ? `<span class="repo-tag">Created ${created}</span>` : ''}
             ${s.data.archived ? '<span class="repo-tag" style="background:rgba(248,113,113,0.15);color:#f87171;border-color:rgba(248,113,113,0.2);">Archived</span>' : ''}
             <span class="repo-tag">${(s.data.size / 1024).toFixed(1)} MB</span>
-            <span class="repo-tag">${fmt(s.data.mentionableUsers)} users</span>
+            <span class="repo-tag">${fmt(s.data.mentionableUsers)} contributors</span>
           </div>
           <div class="repo-links">
             <a href="${explorerBase}/#/${repoPath}" target="_blank" class="repo-link" title="View detailed star, commit, and fork charts on Daily Stars Explorer">
