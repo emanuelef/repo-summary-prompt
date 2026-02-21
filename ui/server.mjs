@@ -21,6 +21,20 @@ app.get('/', async (c) => {
 // Health check endpoint
 app.get('/health', (c) => c.json({ status: 'ok' }));
 
+// Ollama status endpoint
+app.get('/api/ollama-status', async (c) => {
+  const enabled = process.env.USE_OLLAMA === 'true' && !!process.env.OLLAMA_URL && !!process.env.OLLAMA_MODEL;
+  if (!enabled) return c.json({ enabled: false });
+  try {
+    const res = await fetch(`${process.env.OLLAMA_URL.replace(/\/$/, '')}/api/tags`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    return c.json({ enabled: true, model: process.env.OLLAMA_MODEL, reachable: res.ok });
+  } catch {
+    return c.json({ enabled: true, model: process.env.OLLAMA_MODEL, reachable: false });
+  }
+});
+
 // Serve static assets (if any)
 app.get('/favicon.ico', (c) => c.body('', 204));
 

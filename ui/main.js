@@ -13,9 +13,22 @@
     const errorDiv = document.getElementById('error');
     const elapsedTimer = document.getElementById('elapsedTimer');
     const recentReposEl = document.getElementById('recentRepos');
+    const ollamaSection = document.getElementById('ollamaSection');
+    const ollamaBadge = document.getElementById('ollamaBadge');
 
     const isGhPages = location.hostname.endsWith('github.io');
     const apiBase = isGhPages ? 'https://emafuma.mywire.org:3000' : '';
+
+    // ── Ollama status check on load ───────────────────
+    if (!isGhPages) {
+      fetch(`${apiBase}/api/ollama-status`).then(r => r.json()).then(({ enabled, model, reachable }) => {
+        if (!enabled) return;
+        ollamaBadge.className = `ollama-badge ${reachable ? 'ready' : 'offline'}`;
+        ollamaBadge.title = reachable ? `Ollama ready (${model})` : `Ollama configured but unreachable`;
+        ollamaBadge.innerHTML = `<span>${reachable ? '●' : '○'}</span> Ollama${model ? ` · ${model}` : ''}`;
+        ollamaBadge.style.display = 'inline-flex';
+      }).catch(() => {});
+    }
 
     // Chart view mode: '30d' or 'full'
     let chartViewMode = localStorage.getItem('chartViewMode') || '30d';
@@ -639,6 +652,21 @@
         document.getElementById('chartViewToggle').style.display = 'flex';
         hideSkeleton();
       }
+
+      // Ollama AI analysis section
+      if (metrics.ollama) {
+        const { response, model } = metrics.ollama.data;
+        ollamaSection.innerHTML = `
+          <div class="ollama-header">
+            <div class="ollama-title">
+              <span>🤖</span> AI Analysis
+              ${model ? `<span class="ollama-model-tag">${model}</span>` : ''}
+            </div>
+          </div>
+          <div class="ollama-content">${response.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+        `;
+        ollamaSection.style.display = 'block';
+      }
     }
 
     function classifyLine(text) {
@@ -695,6 +723,7 @@
       metricsGrid.style.display = 'none';
       metricsGrid.innerHTML = '';
       chartViewToggle.style.display = 'none';
+      ollamaSection.style.display = 'none';
       repoInfo.style.display = 'none';
       progressLog.innerHTML = '';
       progressLog.style.display = 'block';

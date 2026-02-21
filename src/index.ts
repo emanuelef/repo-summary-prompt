@@ -13,6 +13,7 @@ import {
   fetchYouTubeMentions,
   fetchReleases,
   setApiUrl,
+  tryOllama,
 } from "./api.js";
 import {
   summarizeTimeSeries,
@@ -230,6 +231,21 @@ async function main() {
     governance,
     buzz,
   });
+
+  // Run Ollama analysis if enabled
+  if (process.env.USE_OLLAMA === 'true') {
+    console.error(`  → Ollama: running analysis...`);
+    const ollamaResult = await tryOllama(prompt);
+    if (ollamaResult) {
+      console.error(`  ✓ Ollama: done`);
+      console.error(`@@METRICS@@${JSON.stringify({
+        type: "ollama",
+        data: { response: ollamaResult, model: process.env.OLLAMA_MODEL || 'unknown' }
+      })}`);
+    } else {
+      console.error(`  ✗ Ollama: failed`);
+    }
+  }
 
   console.log(prompt);
 }

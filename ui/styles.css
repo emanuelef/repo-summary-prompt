@@ -570,6 +570,75 @@
     .fetch-step-icon { font-size: 0.9em; }
     .fetch-counter { font-size: 0.84em; color: var(--text-muted); }
 
+    /* ── Ollama Section ──────────────────────────────── */
+    .ollama-section {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(168,85,247,0.2);
+      padding: 1.8em;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 1.5em;
+      animation: fadeSlideIn 0.4s ease-out;
+    }
+    .ollama-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1em;
+    }
+    .ollama-title {
+      font-size: 1.1em;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+    }
+    .ollama-model-tag {
+      background: rgba(168,85,247,0.12);
+      border: 1px solid rgba(168,85,247,0.25);
+      color: #c084fc;
+      padding: 0.2em 0.6em;
+      border-radius: 20px;
+      font-size: 0.78em;
+      font-weight: 500;
+    }
+    .ollama-content {
+      background: var(--prompt-bg);
+      border: 1px solid var(--log-border);
+      padding: 1.2em;
+      border-radius: var(--radius-sm);
+      font-size: 0.9em;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      max-height: 500px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .ollama-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3em;
+      padding: 0.25em 0.65em;
+      border-radius: 20px;
+      font-size: 0.78em;
+      font-weight: 600;
+      cursor: default;
+    }
+    .ollama-badge.ready {
+      background: rgba(168,85,247,0.12);
+      border: 1px solid rgba(168,85,247,0.25);
+      color: #c084fc;
+    }
+    .ollama-badge.offline {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text-muted);
+    }
+
     /* ── Footer ──────────────────────────────────────── */
     .footer { text-align: center; color: var(--text-muted); font-size: 0.84em; margin-top: 2em; }
     .footer a { color: var(--text-secondary); text-decoration: none; }

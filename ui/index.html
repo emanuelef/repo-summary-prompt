@@ -15,7 +15,10 @@
           <h1><a href="/">Repo<span class="brand-accent">Lens</span></a></h1>
           <p class="tagline">GitHub project health, momentum & evolution insights</p>
         </div>
-        <button class="theme-toggle" id="themeToggle" title="Toggle light/dark mode">🌙</button>
+        <div style="display:flex;align-items:center;gap:0.5em;">
+          <span id="ollamaBadge" style="display:none;"></span>
+          <button class="theme-toggle" id="themeToggle" title="Toggle light/dark mode">🌙</button>
+        </div>
       </div>
       <form id="repoForm" class="search-bar">
         <input type="text" id="repoInput" placeholder="owner/repo or https://github.com/owner/repo" required autocomplete="off" spellcheck="false" />
@@ -62,6 +65,8 @@
     </div>
 
     <div id="error" class="error" style="display:none;"></div>
+
+    <div id="ollamaSection" class="ollama-section" style="display:none;"></div>
 
     <div id="promptSection" class="prompt-section" style="display:none;">
       <div class="prompt-header">
