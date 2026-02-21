@@ -13,7 +13,6 @@
     const errorDiv = document.getElementById('error');
     const elapsedTimer = document.getElementById('elapsedTimer');
     const recentReposEl = document.getElementById('recentRepos');
-    const shareContainer = document.getElementById('shareContainer');
 
     const isGhPages = location.hostname.endsWith('github.io');
     const apiBase = isGhPages ? 'https://emafuma.mywire.org:3000' : '';
@@ -411,6 +410,8 @@
           return `<div class="metric-bar" style="height:${height}%;background:${grad}" title="${tip}"></div>`;
         }).join('');
         chart = `<div class="metric-chart">${bars}</div>`;
+      } else if (series === undefined) {
+        chart = `<div class="metric-chart" style="justify-content:center;align-items:center;opacity:0.35;border:1px dashed rgba(255,255,255,0.08);border-radius:4px;"><span style="font-size:0.74em;color:var(--text-muted);">chart unavailable</span></div>`;
       }
 
       card.innerHTML = `
@@ -477,10 +478,13 @@
               <svg viewBox="0 0 16 16"><path d="M1.5 14.25V1.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v12.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25zM3 3v4h2V3H3zm3 0v7h2V3H6zm3 0v5h2V3H9z"/></svg>
               Daily Stars Explorer
             </a>
+            <button id="shareBtn" class="repo-link" style="cursor:pointer;" title="Copy shareable link to clipboard">
+              <svg viewBox="0 0 16 16"><path d="M13.5 3a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 5.5a2.5 2.5 0 00-3.5-2.29l-4.33 2.6a2.5 2.5 0 000 4.38l4.33 2.6A2.5 2.5 0 1014 11.5v-6A.5.5 0 0015 5.5zm-3.5 7.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM4.5 8a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
+              Share
+            </button>
           </div>
         `;
         repoInfo.style.display = 'block';
-        shareContainer.style.display = 'block'; // Show share button after data is loaded
         hideSkeleton();
       }
 
@@ -691,7 +695,6 @@
       metricsGrid.style.display = 'none';
       metricsGrid.innerHTML = '';
       chartViewToggle.style.display = 'none';
-      shareContainer.style.display = 'none';
       repoInfo.style.display = 'none';
       progressLog.innerHTML = '';
       progressLog.style.display = 'block';
