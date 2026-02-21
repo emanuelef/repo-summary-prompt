@@ -38,6 +38,28 @@ app.get('/api/ollama-status', async (c) => {
 // Serve static assets (if any)
 app.get('/favicon.ico', (c) => c.body('', 204));
 
+// ── Ollama helper (server-side, no timeout cap from proxy) ────────────
+async function callOllama(prompt, timeoutMs = 1200000) {
+  const url = `${process.env.OLLAMA_URL.replace(/\/$/, '')}/api/generate`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: process.env.OLLAMA_MODEL, prompt, stream: false }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.response || null;
+  } catch {
+    clearTimeout(timer);
+    return null;
+  }
+}
+
 // Validate repo format: must be owner/repo with safe characters only
 function sanitizeRepo(str) {
   const cleaned = str.trim()
@@ -177,19 +199,50 @@ app.get('/api/prompt', async (c) => {
           closeController();
         });
 
-        child.on('close', (code) => {
+        child.on('close', async (code) => {
           activeChild = null;
           if (code !== 0) {
-            // Use the last stderr line as error message if it looks like an error
             const msg = lastStderrLine.startsWith('Error:')
               ? lastStderrLine
               : `Process exited with code ${code}`;
             send('error', msg);
-          } else {
-            send('done', stdout);
-            // Cache successful results until midnight UTC
-            cache.set(repoStr, { events: recordedEvents, cachedAt: new Date() });
+            closeController();
+            return;
           }
+
+          // Send prompt immediately — client shows it right away
+          send('done', stdout);
+          cache.set(repoStr, { events: recordedEvents, cachedAt: new Date() });
+
+          // Run Ollama on the server side if enabled
+          const ollamaEnabled = process.env.USE_OLLAMA === 'true'
+            && !!process.env.OLLAMA_URL
+            && !!process.env.OLLAMA_MODEL;
+
+          if (ollamaEnabled) {
+            send('ollama-pending', { model: process.env.OLLAMA_MODEL });
+
+            // Send SSE keepalive comments every 30s to prevent proxy idle-timeout
+            // (Ollama can take 10-15 min on a slow VM)
+            const keepalive = setInterval(() => {
+              if (!closed) {
+                try { controller.enqueue(enc.encode(': keepalive\n\n')); } catch { clearInterval(keepalive); }
+              } else {
+                clearInterval(keepalive);
+              }
+            }, 30000);
+
+            const ollamaResult = await callOllama(stdout);
+            clearInterval(keepalive);
+
+            if (ollamaResult && !closed) {
+              const ollamaPayload = { type: 'ollama', data: { response: ollamaResult, model: process.env.OLLAMA_MODEL } };
+              send('metrics', ollamaPayload);
+              // Also persist Ollama result in cache
+              cache.set(repoStr, { events: [...recordedEvents, { event: 'metrics', data: ollamaPayload }], cachedAt: new Date() });
+            }
+          }
+
           closeController();
         });
       },

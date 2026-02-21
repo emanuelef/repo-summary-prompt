@@ -753,6 +753,27 @@
 
       let finalPrompt = null;
       let gotError = null;
+      let promptShown = false;
+
+      // Show prompt immediately and re-enable the button — called on 'done' inside the loop
+      const showPromptNow = (text) => {
+        if (promptShown) return;
+        promptShown = true;
+        rawPromptText = text;
+        outputRaw.textContent = text;
+        outputRendered.innerHTML = renderMarkdown(text);
+        promptSection.style.display = 'block';
+        stopTimer();
+        hideSkeleton();
+        hideFetchTracker();
+        progressVisible = false;
+        progressLog.style.display = 'none';
+        toggleArrow.textContent = '▶';
+        hasGeneratedData = true;
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Update';
+        submitBtn.title = 'Fetch latest data (bypasses 1-day cache)';
+      };
 
       try {
         const res = await fetch(`${apiBase}/api/prompt?repo=${encodeURIComponent(repoVal)}${forceParam}`, {
@@ -783,18 +804,16 @@
               if (line.startsWith('event: ')) eventType = line.slice(7);
               else if (line.startsWith('data: ')) data = line.slice(6);
             }
+            // SSE keepalive comments have no data — skip
             if (!data) continue;
 
             try {
               const parsed = JSON.parse(data);
               if (eventType === 'cache') {
-                // Show cached data notice
                 const cachedAt = new Date(parsed.cachedAt);
                 const expiresAt = new Date(parsed.expiresAt);
                 const fmtTime = (d) => d.toLocaleString('en-GB', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit', hour12: false });
                 const fmtDate = (d) => d.toLocaleString('en-GB', { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' });
-                const localOffset = -(new Date().getTimezoneOffset() / 60);
-                const sign = localOffset >= 0 ? '+' : '';
                 const localMidnight = new Date(expiresAt.getTime());
                 const localResetTime = localMidnight.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
                 appendProgress(`⚡ Serving cached results (fetched ${fmtDate(cachedAt)} ${fmtTime(cachedAt)} UTC)`);
@@ -806,6 +825,25 @@
                 updateDashboard();
               } else if (eventType === 'done') {
                 finalPrompt = parsed;
+                // Show prompt immediately — don't wait for Ollama
+                showPromptNow(finalPrompt);
+              } else if (eventType === 'ollama-pending') {
+                // Server started Ollama — show loading state
+                const { model } = parsed;
+                ollamaSection.innerHTML = `
+                  <div class="ollama-header">
+                    <div class="ollama-title">
+                      <span>🤖</span> AI Analysis
+                      ${model ? `<span class="ollama-model-tag">${model}</span>` : ''}
+                    </div>
+                    <span style="font-size:0.82em;color:var(--text-muted);">Running analysis, this may take a while...</span>
+                  </div>
+                  <div class="ollama-content" style="display:flex;align-items:center;gap:0.6em;min-height:60px;opacity:0.5;">
+                    <span style="display:inline-block;width:12px;height:12px;border:2px solid var(--accent-glow);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;"></span>
+                    Waiting for Ollama...
+                  </div>
+                `;
+                ollamaSection.style.display = 'block';
               } else if (eventType === 'error') {
                 gotError = parsed;
               }
@@ -813,6 +851,7 @@
           }
         }
 
+        // Stream closed — handle any remaining state
         stopTimer();
         hideSkeleton();
         hideFetchTracker();
@@ -820,34 +859,27 @@
         if (gotError) {
           errorDiv.textContent = gotError;
           errorDiv.style.display = 'block';
-        } else if (finalPrompt) {
-          rawPromptText = finalPrompt;
-          outputRaw.textContent = finalPrompt;
-          outputRendered.innerHTML = renderMarkdown(finalPrompt);
-          promptSection.style.display = 'block';
-          // Auto-collapse progress log when done
-          progressVisible = false;
-          progressLog.style.display = 'none';
-          toggleArrow.textContent = '▶';
-        } else {
+        } else if (!finalPrompt) {
           errorDiv.textContent = 'No output received';
           errorDiv.style.display = 'block';
         }
+
+        // If Ollama section is stuck in pending (Ollama failed/timed out), show failure
+        if (ollamaSection.style.display !== 'none' && !metrics.ollama) {
+          const contentEl = ollamaSection.querySelector('.ollama-content');
+          if (contentEl) contentEl.innerHTML = '<span style="opacity:0.5;font-size:0.85em;">Ollama did not return a response.</span>';
+        }
       } catch (err) {
-        if (err.name === 'AbortError') return; // Silently ignore aborted requests
+        if (err.name === 'AbortError') return;
         stopTimer();
         hideSkeleton();
         errorDiv.textContent = err.message || 'Request failed';
         errorDiv.style.display = 'block';
       } finally {
         currentAbort = null;
-        submitBtn.disabled = false;
-        // Change button to "Update" after first successful generation
-        if (finalPrompt && !gotError) {
-          hasGeneratedData = true;
-          submitBtn.textContent = 'Update';
-          submitBtn.title = 'Fetch latest data (bypasses 1-day cache)';
-        } else {
+        // Re-enable button if prompt was never shown (error / abort path)
+        if (!promptShown) {
+          submitBtn.disabled = false;
           submitBtn.textContent = hasGeneratedData ? 'Update' : 'Generate';
         }
       }
