@@ -192,6 +192,12 @@ interface FetchJsonOptions {
   retryDelayMs?: number;
   /** Label for progress logs (default: the path) */
   label?: string;
+  /**
+   * Optional predicate: if the backend returns HTTP 200 but the data fails this check
+   * (e.g. empty array because the backend hasn't indexed the repo yet), treat it as
+   * a transient failure and keep retrying until the deadline.
+   */
+  validateData?: (data: any) => boolean;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -208,6 +214,7 @@ async function fetchJson<T>(
     totalTimeoutMs = 15 * 60_000,
     retryDelayMs = 3_000,
     label = path,
+    validateData,
   } = opts;
 
   const url = new URL(path, getApiUrl());
@@ -233,10 +240,16 @@ async function fetchJson<T>(
 
       if (res.ok) {
         const data = (await res.json()) as T;
-        if (attempt > 1) {
-          console.error(`[API] ${label} ✓ succeeded on attempt ${attempt}`);
+        // If a validator is provided and the data fails it (e.g. empty array because
+        // the backend hasn't indexed this repo yet), treat it as transient and retry.
+        if (validateData && !validateData(data)) {
+          console.error(`[API] ${label} returned 200 but empty data (attempt ${attempt}), retrying in ${Math.round(delay / 1000)}s...`);
+        } else {
+          if (attempt > 1) {
+            console.error(`[API] ${label} ✓ succeeded on attempt ${attempt}`);
+          }
+          return data;
         }
-        return data;
       }
 
       // 404 = repo not found — don't retry, fail immediately
@@ -282,27 +295,43 @@ export function fetchStars(repo: string) {
     label: "stars",
     totalTimeoutMs: 30 * 60_000,   // up to 30 minutes total
     perRequestTimeoutMs: 10 * 60_000, // 10 min per attempt
+    validateData: (d) => d?.stars?.length > 0,
   });
 }
 
 export function fetchCommits(repo: string) {
-  return fetchJson<AllCommitsResponse>("/allCommits", { repo }, { label: "commits" });
+  return fetchJson<AllCommitsResponse>("/allCommits", { repo }, {
+    label: "commits",
+    validateData: (d) => d?.commits?.length > 0,
+  });
 }
 
 export function fetchPRs(repo: string) {
-  return fetchJson<AllPRsResponse>("/allPRs", { repo }, { label: "PRs" });
+  return fetchJson<AllPRsResponse>("/allPRs", { repo }, {
+    label: "PRs",
+    validateData: (d) => d?.prs?.length > 0,
+  });
 }
 
 export function fetchIssues(repo: string) {
-  return fetchJson<AllIssuesResponse>("/allIssues", { repo }, { label: "issues" });
+  return fetchJson<AllIssuesResponse>("/allIssues", { repo }, {
+    label: "issues",
+    validateData: (d) => d?.issues?.length > 0,
+  });
 }
 
 export function fetchForks(repo: string) {
-  return fetchJson<AllForksResponse>("/allForks", { repo }, { label: "forks" });
+  return fetchJson<AllForksResponse>("/allForks", { repo }, {
+    label: "forks",
+    validateData: (d) => d?.forks?.length > 0,
+  });
 }
 
 export function fetchContributors(repo: string) {
-  return fetchJson<AllContributorsResponse>("/allContributors", { repo }, { label: "contributors" });
+  return fetchJson<AllContributorsResponse>("/allContributors", { repo }, {
+    label: "contributors",
+    validateData: (d) => d?.contributors?.length > 0,
+  });
 }
 
 export function fetchGHMentions(repo: string) {
