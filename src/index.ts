@@ -117,58 +117,58 @@ async function main() {
   }
 
   const starsData = await tracked("stars", () => fetchStars(repo));
-  if (starsData?.stars?.length) {
+  {
     // Skip last day (partial data if early in UTC day)
-    const full = starsData.stars.slice(0, -1);
+    const full = starsData?.stars?.length ? starsData.stars.slice(0, -1) : null;
     console.error(`@@METRICS@@${JSON.stringify({
       type: "stars",
-      data: { series: full, total: full.length > 0 ? full[full.length - 1][2] : 0 }
+      data: { series: full, total: full && full.length > 0 ? full[full.length - 1][2] : 0 }
     })}`);
   }
 
   const commitsData = await tracked("commits", () => fetchCommits(repo));
-  if (commitsData?.commits?.length) {
-    const full = commitsData.commits.slice(0, -1);
+  {
+    const full = commitsData?.commits?.length ? commitsData.commits.slice(0, -1) : null;
     console.error(`@@METRICS@@${JSON.stringify({
       type: "commits",
-      data: { series: full, total: full.length > 0 ? full[full.length - 1][2] : 0 }
+      data: { series: full, total: full && full.length > 0 ? full[full.length - 1][2] : 0 }
     })}`);
   }
 
   const prsData = await tracked("PRs", () => fetchPRs(repo));
-  if (prsData?.prs?.length) {
+  {
     // PRs: [date, opened, closed, merged, openedCumul, closedCumul, mergedCumul, ?, ?]
-    const full = prsData.prs.slice(0, -1);
+    const full = prsData?.prs?.length ? prsData.prs.slice(0, -1) : null;
     console.error(`@@METRICS@@${JSON.stringify({
       type: "prs",
-      data: { series: full.map((e: any) => [e[0], e[1], e[2], e[3]]) }
+      data: { series: full ? full.map((e: any) => [e[0], e[1], e[2], e[3]]) : null }
     })}`);
   }
 
   const issuesData = await tracked("issues", () => fetchIssues(repo));
-  if (issuesData?.issues?.length) {
-    const full = issuesData.issues.slice(0, -1);
+  {
+    const full = issuesData?.issues?.length ? issuesData.issues.slice(0, -1) : null;
     console.error(`@@METRICS@@${JSON.stringify({
       type: "issues",
-      data: { series: full.map((e: any) => [e[0], e[1], e[2]]) }
+      data: { series: full ? full.map((e: any) => [e[0], e[1], e[2]]) : null }
     })}`);
   }
 
   const forksData = await tracked("forks", () => fetchForks(repo));
-  if (forksData?.forks?.length) {
-    const full = forksData.forks.slice(0, -1);
+  {
+    const full = forksData?.forks?.length ? forksData.forks.slice(0, -1) : null;
     console.error(`@@METRICS@@${JSON.stringify({
       type: "forks",
-      data: { series: full, total: full.length > 0 ? full[full.length - 1][2] : 0 }
+      data: { series: full, total: full && full.length > 0 ? full[full.length - 1][2] : 0 }
     })}`);
   }
 
   const contributorsData = await tracked("contributors", () => fetchContributors(repo));
-  if (contributorsData?.contributors?.length) {
-    const full = contributorsData.contributors.slice(0, -1);
+  {
+    const full = contributorsData?.contributors?.length ? contributorsData.contributors.slice(0, -1) : null;
     console.error(`@@METRICS@@${JSON.stringify({
       type: "contributors",
-      data: { series: full, total: full.length > 0 ? full[full.length - 1][2] : 0 }
+      data: { series: full, total: full && full.length > 0 ? full[full.length - 1][2] : 0 }
     })}`);
   }
 

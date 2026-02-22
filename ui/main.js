@@ -423,7 +423,7 @@
           return `<div class="metric-bar" style="height:${height}%;background:${grad}" title="${tip}"></div>`;
         }).join('');
         chart = `<div class="metric-chart">${bars}</div>`;
-      } else if (series === undefined) {
+      } else if (series == null) {
         chart = `<div class="metric-chart" style="justify-content:center;align-items:center;opacity:0.35;border:1px dashed rgba(255,255,255,0.08);border-radius:4px;"><span style="font-size:0.74em;color:var(--text-muted);">chart unavailable</span></div>`;
       }
 
@@ -531,7 +531,7 @@
         metricsGrid.appendChild(createMetricCard(
           'Commits',
           metrics.commits.data.total,
-          `${fmt(last30)} in last 30 days`,
+          last30 ? `${fmt(last30)} in last 30 days` : '',
           metrics.commits.data.series,
           'linear-gradient(to top, #059669, #34d399)'
         ));
@@ -543,8 +543,8 @@
         metricsGrid.appendChild(createMetricCard(
           'Pull Requests (30d)',
           opened,
-          `${fmt(merged)} merged`,
-          metrics.prs.data.series.map(s => [s[0], s[1]]),
+          merged ? `${fmt(merged)} merged` : '',
+          metrics.prs.data.series ? metrics.prs.data.series.map(s => [s[0], s[1]]) : null,
           'linear-gradient(to top, #7c3aed, #a78bfa)'
         ));
       }
@@ -555,8 +555,8 @@
         metricsGrid.appendChild(createMetricCard(
           'Issues (30d)',
           opened,
-          `${fmt(closed)} closed`,
-          metrics.issues.data.series.map(s => [s[0], s[1]]),
+          closed ? `${fmt(closed)} closed` : '',
+          metrics.issues.data.series ? metrics.issues.data.series.map(s => [s[0], s[1]]) : null,
           'linear-gradient(to top, #dc2626, #f87171)'
         ));
       }
