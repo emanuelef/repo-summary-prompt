@@ -186,7 +186,7 @@ export interface Release {
 interface FetchJsonOptions {
   /** Timeout per individual HTTP request attempt (default: 5 min) */
   perRequestTimeoutMs?: number;
-  /** Total wall-clock time to keep retrying (default: 15 min) */
+  /** Total wall-clock time to keep retrying on HTTP errors (default: 15 min) */
   totalTimeoutMs?: number;
   /** Initial delay between retries in ms (default: 3000). Doubles each retry, capped at 30s. */
   retryDelayMs?: number;
@@ -194,10 +194,14 @@ interface FetchJsonOptions {
   label?: string;
   /**
    * Optional predicate: if the backend returns HTTP 200 but the data fails this check
-   * (e.g. empty array because the backend hasn't indexed the repo yet), treat it as
-   * a transient failure and keep retrying until the deadline.
+   * (e.g. empty array because the backend hasn't indexed the repo yet), retry a few times
+   * with a fixed delay before accepting the empty result.
    */
   validateData?: (data: any) => boolean;
+  /** How many times to retry on empty-but-200 responses (default: 3) */
+  maxEmptyRetries?: number;
+  /** Delay between empty-data retries in ms (default: 20s) */
+  emptyRetryDelayMs?: number;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -215,6 +219,8 @@ async function fetchJson<T>(
     retryDelayMs = 3_000,
     label = path,
     validateData,
+    maxEmptyRetries = 3,
+    emptyRetryDelayMs = 20_000,
   } = opts;
 
   const url = new URL(path, getApiUrl());
@@ -225,6 +231,7 @@ async function fetchJson<T>(
   const deadline = Date.now() + totalTimeoutMs;
   let delay = retryDelayMs;
   let attempt = 0;
+  let emptyAttempts = 0;
 
   while (Date.now() < deadline) {
     attempt++;
@@ -240,16 +247,24 @@ async function fetchJson<T>(
 
       if (res.ok) {
         const data = (await res.json()) as T;
-        // If a validator is provided and the data fails it (e.g. empty array because
-        // the backend hasn't indexed this repo yet), treat it as transient and retry.
+        // If a validator is provided and the data fails it (e.g. backend returned HTTP 200
+        // with an empty array because it hasn't indexed this repo yet), retry a limited
+        // number of times before accepting the empty result.
         if (validateData && !validateData(data)) {
-          console.error(`[API] ${label} returned 200 but empty data (attempt ${attempt}), retrying in ${Math.round(delay / 1000)}s...`);
-        } else {
-          if (attempt > 1) {
-            console.error(`[API] ${label} ✓ succeeded on attempt ${attempt}`);
+          emptyAttempts++;
+          if (emptyAttempts > maxEmptyRetries) {
+            // Backend consistently has no data — accept the empty result
+            console.error(`[API] ${label} no data after ${emptyAttempts} attempts, accepting empty response`);
+            return data;
           }
-          return data;
+          console.error(`[API] ${label} returned empty data (attempt ${emptyAttempts}/${maxEmptyRetries}), retrying in ${emptyRetryDelayMs / 1000}s...`);
+          await sleep(emptyRetryDelayMs);
+          continue;
         }
+        if (attempt > 1) {
+          console.error(`[API] ${label} ✓ succeeded on attempt ${attempt}`);
+        }
+        return data;
       }
 
       // 404 = repo not found — don't retry, fail immediately

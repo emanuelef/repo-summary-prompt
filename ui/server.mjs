@@ -183,14 +183,21 @@ app.get('/api/prompt', async (c) => {
 
         let stdout = '';
         let lastStderrLine = '';
+        // Buffer for incomplete stderr lines — large @@METRICS@@ payloads (e.g. 3000+ star
+        // entries) span multiple data chunks; we must reassemble before parsing.
+        let stderrBuf = '';
 
         child.stdout.on('data', (chunk) => {
           stdout += chunk.toString();
         });
 
         child.stderr.on('data', (chunk) => {
-          const lines = chunk.toString().split('\n').filter(Boolean);
+          stderrBuf += chunk.toString();
+          const lines = stderrBuf.split('\n');
+          // Keep the last (potentially incomplete) segment in the buffer
+          stderrBuf = lines.pop();
           for (const line of lines) {
+            if (!line) continue;
             if (line.startsWith('@@METRICS@@')) {
               try {
                 const payload = JSON.parse(line.slice('@@METRICS@@'.length));
