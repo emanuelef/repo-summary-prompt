@@ -158,9 +158,11 @@ app.get('/api/prompt', async (c) => {
           }
         };
         
+        let globalKeepalive = null;
         const closeController = () => {
           if (closed) return;
           closed = true;
+          if (globalKeepalive) { clearInterval(globalKeepalive); globalKeepalive = null; }
           try {
             controller.close();
           } catch {}
@@ -171,6 +173,13 @@ app.get('/api/prompt', async (c) => {
           env: { ...process.env },
         });
         activeChild = child;
+
+        // Send SSE keepalive comments every 30s throughout the entire run
+        // (CLI can take 30+ min for large repos; proxy kills idle connections after ~1 min)
+        globalKeepalive = setInterval(() => {
+          if (closed) { clearInterval(globalKeepalive); globalKeepalive = null; return; }
+          try { controller.enqueue(enc.encode(': keepalive\n\n')); } catch { clearInterval(globalKeepalive); globalKeepalive = null; }
+        }, 30000);
 
         let stdout = '';
         let lastStderrLine = '';
