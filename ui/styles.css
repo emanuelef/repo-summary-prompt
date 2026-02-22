@@ -121,6 +121,10 @@
     .search-bar button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px var(--accent-glow); }
     .search-bar button:active:not(:disabled) { transform: translateY(0); }
     .search-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
+    @media (max-width: 500px) {
+      .search-bar { flex-direction: column; }
+      .search-bar button { width: 100%; }
+    }
 
     .header-top { display: flex; justify-content: space-between; align-items: center; }
     .hint { color: var(--text-muted); font-size: 0.88em; margin-top: 0.7em; }
