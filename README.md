@@ -10,17 +10,17 @@ The hosted version runs on a shared GitHub PAT (also used by [Daily Stars Explor
 
 ## Privacy
 
-- **No account required** — just type a repo name and go
-- **No tracking or analytics** — no cookies, no fingerprinting, no third-party scripts
-- **No data stored** — results are computed on demand and cached in memory only (cleared at UTC midnight)
-- **Self-hostable** — run your own instance with full control over your data and API token
+- **No account required** - just type a repo name and go
+- **No tracking or analytics** - no cookies, no fingerprinting, no third-party scripts
+- **No data stored** - results are computed on demand and cached in memory only (cleared at UTC midnight)
+- **Self-hostable** - run your own instance with full control over your data and API token
 
 ## What it does
 
 Given an `owner/repo`, the tool:
 
 1. Fetches stars, commits, PRs, issues, forks, contributors, releases, and social mentions (GitHub, Hacker News, Reddit, YouTube) in parallel.
-2. Computes summaries for each metric — totals, 30-day windows, trends, merge/close rates, backlog health.
+2. Computes summaries for each metric - totals, 30-day windows, trends, merge/close rates, backlog health.
 3. Derives an overall **momentum & evolution** assessment (month-over-month growth rates, key signals).
 4. Outputs a single Markdown prompt ready to paste into any LLM for analysis.
 
@@ -78,10 +78,10 @@ repo-summary-prompt golang/go
 
 The easiest way to run everything locally is with Docker Compose. It starts two containers:
 
-- **`daily-stars-explorer`** — the stats API (port 8080) that powers the metrics
-- **`repo-summary-prompt`** — the web UI + CLI (port 3000), pre-configured to talk to the stats API
+- **`daily-stars-explorer`** - the stats API (port 8080) that powers the metrics
+- **`repo-summary-prompt`** - the web UI + CLI (port 3000), pre-configured to talk to the stats API
 
-**Requirements:** Docker, a GitHub Personal Access Token ([generate one](https://github.com/settings/tokens) — no repo access needed).
+**Requirements:** Docker, a GitHub Personal Access Token ([generate one](https://github.com/settings/tokens) - no repo access needed).
 
 ```bash
 # 1. Copy the example env file and fill in your PAT
@@ -100,7 +100,7 @@ To pull the latest images before starting:
 docker compose pull && docker compose up
 ```
 
-> The `REPO_STATS_API_URL` is automatically wired between containers — no manual configuration needed.
+> The `REPO_STATS_API_URL` is automatically wired between containers - no manual configuration needed.
 
 ## Development
 
@@ -133,10 +133,10 @@ REPO_STATS_API_URL=http://localhost:8090 node ui/server.mjs
 ### Running both together
 
 ```bash
-# Terminal 1 — install deps
+# Terminal 1 - install deps
 npm install && cd ui && npm install && cd ..
 
-# Terminal 1 — start the web UI (serves frontend + runs CLI on demand)
+# Terminal 1 - start the web UI (serves frontend + runs CLI on demand)
 node ui/server.mjs
 ```
 
@@ -152,10 +152,10 @@ npm run build   # compiles to dist/
 
 ```
 src/
-  index.ts       CLI entry point — arg parsing, parallel fetching, orchestration
-  api.ts         API client — types and fetch functions for each endpoint
-  summarize.ts   Data crunching — time-series analysis, PR/issue rates, evolution metrics
-  prompt.ts      Prompt builder — assembles all summaries into a structured Markdown prompt
+  index.ts       CLI entry point - arg parsing, parallel fetching, orchestration
+  api.ts         API client - types and fetch functions for each endpoint
+  summarize.ts   Data crunching - time-series analysis, PR/issue rates, evolution metrics
+  prompt.ts      Prompt builder - assembles all summaries into a structured Markdown prompt
 ```
 
 ## Output sections
@@ -184,7 +184,7 @@ The generated prompt includes:
 ```
 npx tsx src/index.ts emanuelef/daily-stars-explorer
 Fetching data for emanuelef/daily-stars-explorer...
-You are a software project analyst specialising in open-source ecosystem dynamics. Based on the following data about the GitHub repository **emanuelef/daily-stars-explorer**, provide a comprehensive summary of how this project is **evolving** — its trajectory, momentum, and the direction it is heading.
+You are a software project analyst specialising in open-source ecosystem dynamics. Based on the following data about the GitHub repository **emanuelef/daily-stars-explorer**, provide a comprehensive summary of how this project is **evolving** - its trajectory, momentum, and the direction it is heading.
 
 ## Repository Info
 - Name: emanuelef/daily-stars-explorer
@@ -233,7 +233,7 @@ You are a software project analyst specialising in open-source ecosystem dynamic
 - Tracked period: 22-09-2023 to 12-02-2026 (875 days)
 - Total opened: 203 | Total closed: 129 | Total merged: 35,237
 - Merge rate: 17358% | Close rate: 64%
-- Last 30 days — opened: 15, closed: 1, merged: 1,899
+- Last 30 days - opened: 15, closed: 1, merged: 1,899
 - PR velocity trend: accelerating
 
 ## Issue Activity
@@ -246,7 +246,7 @@ You are a software project analyst specialising in open-source ecosystem dynamic
 - Tracked period: 22-09-2023 to 12-02-2026 (875 days)
 - Total opened: 28 | Total closed: 14,095
 - Resolution rate: 50339%
-- Last 30 days — opened: 1, closed: 859 (net: -858)
+- Last 30 days - opened: 1, closed: 859 (net: -858)
 - Backlog trend: shrinking
 
 ## Fork Activity Summary
@@ -295,21 +295,21 @@ You are a software project analyst specialising in open-source ecosystem dynamic
 - Commit frequency is increasing
 - Star growth is accelerating
 - PR velocity is accelerating
-- High PR merge rate — contributions are actively being integrated
-- Issue backlog is shrinking — maintainers are catching up
-- Very recent commits — active development
+- High PR merge rate - contributions are actively being integrated
+- Issue backlog is shrinking - maintainers are catching up
+- Very recent commits - active development
 
 ---
 
 Based on all the data above, provide a comprehensive analysis of **how this project is evolving**. Structure your answer as follows:
 
-1. **Trajectory Summary** — Is this project accelerating, cruising, decelerating, or stalling? Describe the overall direction in 2-3 sentences.
-2. **Development Velocity** — How has commit, PR, and release activity changed recently? Is the team shipping faster or slower?
-3. **Community & Adoption Trends** — Are stars, forks, and contributors growing? Is external interest (HN, Reddit, YouTube) rising or fading?
-4. **Maintenance Health** — Are issues being resolved? Is the PR merge rate healthy? Is the backlog under control?
-5. **Key Strengths** — What is going well for this project?
-6. **Key Risks & Concerns** — What signals suggest potential problems?
-7. **6-Month Outlook** — Based on current trends, what is this project likely to look like in 6 months?
+1. **Trajectory Summary** - Is this project accelerating, cruising, decelerating, or stalling? Describe the overall direction in 2-3 sentences.
+2. **Development Velocity** - How has commit, PR, and release activity changed recently? Is the team shipping faster or slower?
+3. **Community & Adoption Trends** - Are stars, forks, and contributors growing? Is external interest (HN, Reddit, YouTube) rising or fading?
+4. **Maintenance Health** - Are issues being resolved? Is the PR merge rate healthy? Is the backlog under control?
+5. **Key Strengths** - What is going well for this project?
+6. **Key Risks & Concerns** - What signals suggest potential problems?
+7. **6-Month Outlook** - Based on current trends, what is this project likely to look like in 6 months?
 ```
 
 ### Example LLM response
@@ -321,15 +321,15 @@ Below is a structured analysis of **emanuelef/daily-stars-explorer** and how it 
 
 ---
 
-# 1️⃣ Trajectory Summary — **Clearly Accelerating**
+# 1️⃣ Trajectory Summary - **Clearly Accelerating**
 
-This project is in a strong acceleration phase. Nearly all activity metrics (stars, commits, PRs, forks) show sharp month-over-month growth, and recent activity levels are significantly above historical averages. The repository is not just active — it is intensifying in momentum.
+This project is in a strong acceleration phase. Nearly all activity metrics (stars, commits, PRs, forks) show sharp month-over-month growth, and recent activity levels are significantly above historical averages. The repository is not just active - it is intensifying in momentum.
 
 It appears to be transitioning from a stable niche tool into a rapidly evolving and increasingly visible project.
 
 ---
 
-# 2️⃣ Development Velocity — **Shipping Much Faster**
+# 2️⃣ Development Velocity - **Shipping Much Faster**
 
 ### 🔹 Commits
 
@@ -363,7 +363,7 @@ Releases are becoming more frequent, and the very recent release suggests a stab
 
 ---
 
-# 3️⃣ Community & Adoption Trends — **Interest Is Rising**
+# 3️⃣ Community & Adoption Trends - **Interest Is Rising**
 
 ### ⭐ Stars
 
@@ -400,7 +400,7 @@ External visibility is emerging but still niche. The presence of YouTube content
 
 ---
 
-# 4️⃣ Maintenance Health — **Strong Operational Discipline**
+# 4️⃣ Maintenance Health - **Strong Operational Discipline**
 
 ### 🧹 Issues
 
@@ -432,7 +432,7 @@ Very recent commits and release activity confirm active stewardship.
 
 ### 🚀 1. Strong Upward Momentum
 
-All growth signals — stars, commits, PRs — are accelerating simultaneously.
+All growth signals - stars, commits, PRs - are accelerating simultaneously.
 
 ### ⚡ 2. High Development Energy
 
@@ -448,7 +448,7 @@ Recent releases show maturation beyond experimental phase.
 
 ### 📈 5. Second-Wave Traction
 
-After a 2024 peak, growth is resuming — suggesting sustained rather than one-off interest.
+After a 2024 peak, growth is resuming - suggesting sustained rather than one-off interest.
 
 ---
 
@@ -507,7 +507,7 @@ If activity is primarily maintainer-driven and unsustainable, velocity could nor
 
 **Status: High-Growth Phase with Maintainer-Driven Acceleration**
 
-daily-stars-explorer is currently in a pronounced expansion cycle — development velocity, adoption, and release cadence are all rising simultaneously. Operational health is strong, backlog is controlled, and momentum signals are positive.
+daily-stars-explorer is currently in a pronounced expansion cycle - development velocity, adoption, and release cadence are all rising simultaneously. Operational health is strong, backlog is controlled, and momentum signals are positive.
 
 The key inflection point ahead is contributor diversification.
 If community participation expands, the project could mature into a durable open-source tool.
