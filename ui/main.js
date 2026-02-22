@@ -30,6 +30,30 @@
       }).catch(() => {});
     }
 
+    // ── Status: cached repos + daily quota ────────────
+    let cachedReposList = [];
+    const quotaBadgeEl = document.getElementById('quotaBadge');
+
+    function updateQuotaBadge(fetchesUsed, fetchesLimit, fetchesRemaining) {
+      if (fetchesLimit == null) { quotaBadgeEl.style.display = 'none'; return; }
+      const pct = fetchesUsed / fetchesLimit;
+      const cls = pct >= 1 ? 'exhausted' : pct >= 0.75 ? 'warning' : 'ok';
+      quotaBadgeEl.className = `quota-badge ${cls}`;
+      quotaBadgeEl.textContent = `${fetchesRemaining} fetch${fetchesRemaining !== 1 ? 'es' : ''} left today`;
+      quotaBadgeEl.title = `${fetchesUsed} of ${fetchesLimit} daily fetches used`;
+      quotaBadgeEl.style.display = 'inline-flex';
+    }
+
+    async function refreshStatus() {
+      if (isGhPages) return;
+      try {
+        const data = await fetch(`${apiBase}/api/status`).then(r => r.json());
+        cachedReposList = data.cachedRepos || [];
+        updateQuotaBadge(data.fetchesUsed, data.fetchesLimit, data.fetchesRemaining);
+      } catch {}
+    }
+    refreshStatus();
+
     // Chart view mode: '30d' or 'full'
     let chartViewMode = localStorage.getItem('chartViewMode') || '30d';
 
@@ -134,6 +158,64 @@
     }
     renderRecentRepos();
 
+    // ── Autocomplete (server-side cached repos) ────────
+    const autocompleteEl = document.getElementById('autocompleteDropdown');
+    let acActiveIndex = -1;
+    let acItems = [];
+
+    function showAutocomplete(query) {
+      if (isGhPages || !autocompleteEl) return;
+      const q = query.toLowerCase().trim();
+      acItems = q
+        ? cachedReposList.filter(r => r.toLowerCase().includes(q))
+        : cachedReposList;
+      if (acItems.length === 0) { autocompleteEl.style.display = 'none'; return; }
+      acActiveIndex = -1;
+      autocompleteEl.innerHTML = '';
+      acItems.forEach(repo => {
+        const item = document.createElement('div');
+        item.className = 'autocomplete-item';
+        item.innerHTML = `<span>${repo}</span><span class="autocomplete-cached-tag">⚡ cached</span>`;
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault(); // prevent blur firing before click
+          input.value = repo;
+          hideAutocomplete();
+          form.dispatchEvent(new Event('submit'));
+        });
+        autocompleteEl.appendChild(item);
+      });
+      autocompleteEl.style.display = 'block';
+    }
+
+    function hideAutocomplete() {
+      if (autocompleteEl) autocompleteEl.style.display = 'none';
+      acActiveIndex = -1;
+    }
+
+    input.addEventListener('input', () => { showAutocomplete(input.value); });
+    input.addEventListener('focus', () => { if (cachedReposList.length > 0) showAutocomplete(input.value); });
+    input.addEventListener('blur', () => { setTimeout(hideAutocomplete, 150); });
+    input.addEventListener('keydown', (e) => {
+      if (!autocompleteEl || autocompleteEl.style.display === 'none') return;
+      const items = autocompleteEl.querySelectorAll('.autocomplete-item');
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        acActiveIndex = Math.min(acActiveIndex + 1, items.length - 1);
+        items.forEach((el, i) => el.classList.toggle('active', i === acActiveIndex));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        acActiveIndex = Math.max(acActiveIndex - 1, -1);
+        items.forEach((el, i) => el.classList.toggle('active', i === acActiveIndex));
+      } else if (e.key === 'Enter' && acActiveIndex >= 0) {
+        e.preventDefault();
+        input.value = acItems[acActiveIndex];
+        hideAutocomplete();
+        form.dispatchEvent(new Event('submit'));
+      } else if (e.key === 'Escape') {
+        hideAutocomplete();
+      }
+    });
+
     const fetchTracker = document.getElementById('fetchTracker');
     const fetchStepsEl = document.getElementById('fetchSteps');
     const fetchCounter = document.getElementById('fetchCounter');
@@ -163,6 +245,34 @@
       'Crystal': '#000100', 'Elm': '#60B5CC', 'PureScript': '#1D222D',
       'Reason': '#ff5847', 'Hack': '#878787', 'COBOL': '#a6a7aa',
     };
+
+    let cooldownTimerInterval = null;
+
+    function startCooldownTimer(message, retryAfterIso) {
+      stopTimer();
+      hideSkeleton();
+      hideFetchTracker();
+      if (cooldownTimerInterval) clearInterval(cooldownTimerInterval);
+      errorDiv.style.display = 'block';
+      const retryAt = new Date(retryAfterIso).getTime();
+      const tick = () => {
+        const remaining = Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
+        const m = Math.floor(remaining / 60);
+        const s = remaining % 60;
+        const timeStr = m > 0 ? `${m}m ${s.toString().padStart(2, '0')}s` : `${s}s`;
+        if (remaining > 0) {
+          errorDiv.innerHTML = `${message}<br><small style="opacity:0.75;font-size:0.9em;">Retry in: <strong>${timeStr}</strong></small>`;
+        } else {
+          clearInterval(cooldownTimerInterval);
+          cooldownTimerInterval = null;
+          errorDiv.innerHTML = `${message}<br><small style="opacity:0.75;color:var(--success);">Cooldown expired — you can fetch this repo again.</small>`;
+          submitBtn.disabled = false;
+          submitBtn.textContent = hasGeneratedData ? 'Update' : 'Generate';
+        }
+      };
+      tick();
+      cooldownTimerInterval = setInterval(tick, 1000);
+    }
 
     const metrics = {};
     let timerInterval = null;
@@ -766,6 +876,7 @@
       let finalPrompt = null;
       let gotError = null;
       let promptShown = false;
+      let cooldownActive = false;
 
       // Show prompt immediately and re-enable the button — called on 'done' inside the loop
       const showPromptNow = (text) => {
@@ -794,6 +905,11 @@
 
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
+          if (res.status === 429 && data.retryAfter) {
+            cooldownActive = true;
+            startCooldownTimer(data.error, data.retryAfter);
+            return;
+          }
           throw new Error(data.error || `HTTP ${res.status}`);
         }
 
@@ -895,8 +1011,10 @@
         errorDiv.style.display = 'block';
       } finally {
         currentAbort = null;
+        refreshStatus(); // update quota counter + cached repos list
         // Re-enable button if prompt was never shown (error / abort path)
-        if (!promptShown) {
+        // Skip if cooldown is active — the countdown timer will re-enable it
+        if (!promptShown && !cooldownActive) {
           submitBtn.disabled = false;
           submitBtn.textContent = hasGeneratedData ? 'Update' : 'Generate';
         }

@@ -16,12 +16,16 @@
           <p class="tagline">GitHub project health, momentum & evolution insights</p>
         </div>
         <div style="display:flex;align-items:center;gap:0.5em;">
+          <span id="quotaBadge" class="quota-badge" style="display:none;"></span>
           <span id="ollamaBadge" style="display:none;"></span>
           <button class="theme-toggle" id="themeToggle" title="Toggle light/dark mode">🌙</button>
         </div>
       </div>
       <form id="repoForm" class="search-bar">
-        <input type="text" id="repoInput" placeholder="owner/repo or https://github.com/owner/repo" required autocomplete="off" spellcheck="false" />
+        <div class="search-input-wrapper">
+          <input type="text" id="repoInput" placeholder="owner/repo or https://github.com/owner/repo" required autocomplete="off" spellcheck="false" />
+          <div id="autocompleteDropdown" class="autocomplete-dropdown" style="display:none;"></div>
+        </div>
         <button type="submit" id="submitBtn">Generate</button>
       </form>
       <div id="recentRepos" class="recent-repos" style="display:none;">

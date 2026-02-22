@@ -60,6 +60,18 @@ async function callOllama(prompt, timeoutMs = 1200000) {
   }
 }
 
+// Status endpoint — cached repos list + daily quota info
+app.get('/api/status', (c) => {
+  checkAndResetFetchCounter();
+  const cachedRepos = [...cache.keys()].filter(k => isCacheValid(cache.get(k)));
+  return c.json({
+    cachedRepos,
+    fetchesUsed: dailyFetchCount,
+    fetchesLimit: maxDailyFetches,
+    fetchesRemaining: maxDailyFetches != null ? Math.max(0, maxDailyFetches - dailyFetchCount) : null,
+  });
+});
+
 // Validate repo format: must be owner/repo with safe characters only
 function sanitizeRepo(str) {
   const cleaned = str.trim()
@@ -86,6 +98,31 @@ function getUTCMidnight() {
 function isCacheValid(entry) {
   if (!entry) return false;
   return entry.cachedAt >= getUTCMidnight();
+}
+
+// Daily fetch counter (resets at UTC midnight, same cadence as cache)
+let dailyFetchCount = 0;
+let fetchCountDay = getUTCMidnight();
+// Default 20; set MAX_DAILY_FETCHES=unlimited (or 0) to disable
+const maxDailyFetches = (() => {
+  const v = process.env.MAX_DAILY_FETCHES;
+  if (!v || v === 'unlimited') return v === 'unlimited' ? null : 20;
+  const n = parseInt(v, 10);
+  return isNaN(n) || n <= 0 ? null : n;
+})();
+
+// Large-repo cooldown — repos with >10k stars are blocked for 1 hour after a fetch
+// (only enforced when a quota is configured, to protect API rate limits)
+const LARGE_REPO_STAR_THRESHOLD = 10_000;
+const LARGE_REPO_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
+const largeRepoCooldowns = new Map(); // repoStr → Date (when last fetched)
+
+function checkAndResetFetchCounter() {
+  const today = getUTCMidnight();
+  if (today > fetchCountDay) {
+    dailyFetchCount = 0;
+    fetchCountDay = today;
+  }
 }
 
 // API endpoint — streams progress via SSE, then sends the final prompt
@@ -129,6 +166,31 @@ app.get('/api/prompt', async (c) => {
     );
   }
 
+  // Check daily fetch limit before spawning (cache hits bypass this)
+  checkAndResetFetchCounter();
+  if (maxDailyFetches != null && dailyFetchCount >= maxDailyFetches) {
+    return c.json({ error: `Daily fetch limit of ${maxDailyFetches} reached. Try a cached repo or come back after midnight UTC.` }, 429);
+  }
+
+  // Check large-repo cooldown (only when a quota is configured)
+  if (maxDailyFetches != null) {
+    const cooldownFetchedAt = largeRepoCooldowns.get(repoStr);
+    if (cooldownFetchedAt) {
+      const elapsed = Date.now() - cooldownFetchedAt.getTime();
+      if (elapsed < LARGE_REPO_COOLDOWN_MS) {
+        const retryAfter = new Date(cooldownFetchedAt.getTime() + LARGE_REPO_COOLDOWN_MS);
+        return c.json({
+          error: `This repo has >10k stars and was fetched recently. Large repos consume significant API quota.`,
+          retryAfter: retryAfter.toISOString(),
+          remainingSeconds: Math.ceil((retryAfter.getTime() - Date.now()) / 1000),
+        }, 429);
+      }
+      largeRepoCooldowns.delete(repoStr); // cooldown expired, clean up
+    }
+  }
+
+  dailyFetchCount++;
+
   // Kill any in-flight CLI process before starting a new one
   if (activeChild) {
     try { activeChild.kill('SIGTERM'); } catch {}
@@ -138,6 +200,7 @@ app.get('/api/prompt', async (c) => {
   let closed = false;
   let child = null;
   let ollamaPromptText = null;
+  let capturedStars = null;
   const recordedEvents = [];
 
   return new Response(
@@ -205,6 +268,9 @@ app.get('/api/prompt', async (c) => {
                   ollamaPromptText = payload.data;
                 } else {
                   send('metrics', payload);
+                  if (payload.type === 'stats' && payload.data?.stars != null) {
+                    capturedStars = payload.data.stars;
+                  }
                 }
               } catch {}
             } else {
@@ -234,6 +300,9 @@ app.get('/api/prompt', async (c) => {
           // Send prompt immediately — client shows it right away
           send('done', stdout);
           cache.set(repoStr, { events: recordedEvents, cachedAt: new Date() });
+          if (maxDailyFetches != null && capturedStars != null && capturedStars > LARGE_REPO_STAR_THRESHOLD) {
+            largeRepoCooldowns.set(repoStr, new Date());
+          }
 
           // Run Ollama on the server side if enabled
           const ollamaEnabled = process.env.USE_OLLAMA === 'true'

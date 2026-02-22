@@ -4,6 +4,9 @@ CLI tool that fetches GitHub repo metrics from a stats API and generates a struc
 
 > **No sign-up. No ads. No cookies.** Use the [hosted version](https://emanuelef.github.io/repo-summary-prompt) instantly, or self-host your own instance in minutes.
 
+> [!NOTE]
+> The hosted version runs on a shared GitHub PAT (also used by [Daily Stars Explorer](https://emanuelef.github.io/daily-stars-explorer)) and is intentionally rate-limited to avoid exhausting it: **20 fetches/day**, and repos with **>10k stars** have a **1-hour cooldown** after each fetch. This is enough for a demo or a handful of repos. For regular or unrestricted use, [self-host your own instance](#self-hosting-with-docker-compose) with your own PAT — it takes under a minute.
+
 <img width="1262" height="2010" alt="screencapture-localhost-3000-2026-02-13-17_09_11" src="https://github.com/user-attachments/assets/19ab9dd0-6af5-4799-b67a-61e0255f0a6c" />
 
 ## Privacy
@@ -177,6 +180,8 @@ The generated prompt includes:
 
 ## Example output
 
+### Generated prompt
+
 ```
 npx tsx src/index.ts emanuelef/daily-stars-explorer
 Fetching data for emanuelef/daily-stars-explorer...
@@ -306,8 +311,12 @@ Based on all the data above, provide a comprehensive analysis of **how this proj
 5. **Key Strengths** — What is going well for this project?
 6. **Key Risks & Concerns** — What signals suggest potential problems?
 7. **6-Month Outlook** — Based on current trends, what is this project likely to look like in 6 months?
+```
 
-## Example ChatGPT response
+### Example LLM response
+
+<details>
+<summary>ChatGPT analysis of <code>emanuelef/daily-stars-explorer</code></summary>
 
 Below is a structured analysis of **emanuelef/daily-stars-explorer** and how it is evolving within the open-source ecosystem.
 
@@ -506,7 +515,8 @@ If community participation expands, the project could mature into a durable open
 If not, it remains a high-energy but centrally driven effort.
 
 At present, the trajectory is clearly upward.
-```
+
+</details>
 
 ## License
 
