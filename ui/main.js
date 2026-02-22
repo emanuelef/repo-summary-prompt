@@ -380,7 +380,7 @@
       return n.toLocaleString('en-US');
     }
 
-    function createMetricCard(title, value, subtitle, series, color) {
+    function createMetricCard(title, value, subtitle, series, color, noData) {
       const card = document.createElement('div');
       card.className = 'metric-card';
       const grad = color || 'linear-gradient(to top, #667eea, #a78bfa)';
@@ -424,7 +424,8 @@
         }).join('');
         chart = `<div class="metric-chart">${bars}</div>`;
       } else if (series == null) {
-        chart = `<div class="metric-chart" style="justify-content:center;align-items:center;opacity:0.35;border:1px dashed rgba(255,255,255,0.08);border-radius:4px;"><span style="font-size:0.74em;color:var(--text-muted);">chart unavailable</span></div>`;
+        const msg = noData ? 'no recent activity' : 'chart unavailable';
+        chart = `<div class="metric-chart" style="justify-content:center;align-items:center;opacity:0.35;border:1px dashed rgba(255,255,255,0.08);border-radius:4px;"><span style="font-size:0.74em;color:var(--text-muted);">${msg}</span></div>`;
       }
 
       card.innerHTML = `
@@ -522,7 +523,8 @@
           metrics.stats?.data.stars || metrics.stars?.data.total || 0,
           subtitle,
           series,
-          'linear-gradient(to top, #f59e0b, #fbbf24)'
+          'linear-gradient(to top, #f59e0b, #fbbf24)',
+          metrics.stars?.data.noData
         ));
       }
 
@@ -533,7 +535,8 @@
           metrics.commits.data.total,
           last30 ? `${fmt(last30)} in last 30 days` : '',
           metrics.commits.data.series,
-          'linear-gradient(to top, #059669, #34d399)'
+          'linear-gradient(to top, #059669, #34d399)',
+          metrics.commits.data.noData
         ));
       }
 
@@ -545,7 +548,8 @@
           opened,
           merged ? `${fmt(merged)} merged` : '',
           metrics.prs.data.series ? metrics.prs.data.series.map(s => [s[0], s[1]]) : null,
-          'linear-gradient(to top, #7c3aed, #a78bfa)'
+          'linear-gradient(to top, #7c3aed, #a78bfa)',
+          metrics.prs.data.noData
         ));
       }
 
@@ -557,7 +561,8 @@
           opened,
           closed ? `${fmt(closed)} closed` : '',
           metrics.issues.data.series ? metrics.issues.data.series.map(s => [s[0], s[1]]) : null,
-          'linear-gradient(to top, #dc2626, #f87171)'
+          'linear-gradient(to top, #dc2626, #f87171)',
+          metrics.issues.data.noData
         ));
       }
 
@@ -568,7 +573,8 @@
           metrics.stats?.data.forks || metrics.forks?.data.total || 0,
           daily30 ? `+${fmt(daily30)} in last 30 days` : '',
           metrics.forks?.data.series,
-          'linear-gradient(to top, #0284c7, #38bdf8)'
+          'linear-gradient(to top, #0284c7, #38bdf8)',
+          metrics.forks?.data.noData
         ));
       }
 
@@ -580,7 +586,8 @@
           total,
           last30 ? `${fmt(last30)} active in last 30d` : '',
           metrics.contributors.data.series,
-          'linear-gradient(to top, #9333ea, #c084fc)'
+          'linear-gradient(to top, #9333ea, #c084fc)',
+          metrics.contributors.data.noData
         ));
       }
 

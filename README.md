@@ -2,8 +2,16 @@
 
 CLI tool that fetches GitHub repo metrics from a stats API and generates a structured LLM prompt summarizing a project's health, momentum, and evolution trajectory.
 
+> **No sign-up. No ads. No cookies.** Use the [hosted version](https://emanuelef.github.io/repo-summary-prompt) instantly, or self-host your own instance in minutes.
 
 <img width="1262" height="2010" alt="screencapture-localhost-3000-2026-02-13-17_09_11" src="https://github.com/user-attachments/assets/19ab9dd0-6af5-4799-b67a-61e0255f0a6c" />
+
+## Privacy
+
+- **No account required** — just type a repo name and go
+- **No tracking or analytics** — no cookies, no fingerprinting, no third-party scripts
+- **No data stored** — results are computed on demand and cached in memory only (cleared at UTC midnight)
+- **Self-hostable** — run your own instance with full control over your data and API token
 
 ## What it does
 
