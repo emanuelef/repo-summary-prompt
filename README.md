@@ -72,6 +72,34 @@ npm link
 repo-summary-prompt golang/go
 ```
 
+## Self-hosting with Docker Compose
+
+The easiest way to run everything locally is with Docker Compose. It starts two containers:
+
+- **`daily-stars-explorer`** — the stats API (port 8080) that powers the metrics
+- **`repo-summary-prompt`** — the web UI + CLI (port 3000), pre-configured to talk to the stats API
+
+**Requirements:** Docker, a GitHub Personal Access Token ([generate one](https://github.com/settings/tokens) — no repo access needed).
+
+```bash
+# 1. Copy the example env file and fill in your PAT
+cp .env.example .env
+# Edit .env and set PAT=your_github_token
+
+# 2. Start both services
+docker compose up
+```
+
+Open [http://localhost:3000](http://localhost:3000). Done.
+
+To pull the latest images before starting:
+
+```bash
+docker compose pull && docker compose up
+```
+
+> The `REPO_STATS_API_URL` is automatically wired between containers — no manual configuration needed.
+
 ## Development
 
 The project has two parts: a CLI backend and a web UI frontend.

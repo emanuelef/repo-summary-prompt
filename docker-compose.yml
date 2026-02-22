@@ -1,0 +1,20 @@
+services:
+  daily-stars-explorer:
+    image: ghcr.io/emanuelef/daily-stars-explorer:latest
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  repo-summary-prompt:
+    image: ghcr.io/emanuelef/repo-summary-prompt:main
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - REPO_STATS_API_URL=http://daily-stars-explorer:8080
+    depends_on:
+      - daily-stars-explorer
+    restart: unless-stopped
