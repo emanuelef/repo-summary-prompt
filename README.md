@@ -4,8 +4,7 @@ CLI tool that fetches GitHub repo metrics from a stats API and generates a struc
 
 > **No sign-up. No ads. No cookies.** Use the [hosted version](https://emanuelef.github.io/repo-summary-prompt) instantly, or self-host your own instance in minutes.
 
-> [!NOTE]
-> The hosted version runs on a shared GitHub PAT (also used by [Daily Stars Explorer](https://emanuelef.github.io/daily-stars-explorer)) and is intentionally rate-limited to avoid exhausting it: **20 fetches/day**, and repos with **>10k stars** have a **1-hour cooldown** after each fetch. This is enough for a demo or a handful of repos. For regular or unrestricted use, [self-host your own instance](#self-hosting-with-docker-compose) with your own PAT — it takes under a minute.
+The hosted version runs on a shared GitHub PAT (also used by [Daily Stars Explorer](https://emanuelef.github.io/daily-stars-explorer)) and is rate-limited to protect it: **20 fetches/day**, with a **1-hour cooldown** on repos over 10k stars. Fine for a demo or a few repos. For regular use, [self-host your own instance](#self-hosting-with-docker-compose) with your own PAT.
 
 <img width="1262" height="2010" alt="screencapture-localhost-3000-2026-02-13-17_09_11" src="https://github.com/user-attachments/assets/19ab9dd0-6af5-4799-b67a-61e0255f0a6c" />
 
