@@ -291,9 +291,12 @@
       { id: 'contributors', label: 'Contributors' },
       { id: 'GH mentions', label: 'GH Mentions' },
       { id: 'HackerNews', label: 'HN' },
-      { id: 'Reddit', label: 'Reddit' },
       { id: 'YouTube', label: 'YouTube' },
       { id: 'releases', label: 'Releases' },
+      { id: 'NPM', label: 'NPM' },
+      { id: 'PyPI', label: 'PyPI' },
+      { id: 'Cargo', label: 'Cargo' },
+      { id: 'Homebrew', label: 'Homebrew' },
     ];
     const stepStates = {};
 
@@ -762,6 +765,88 @@
           ${ratioTag}
         `;
         metricsGrid.appendChild(card);
+      }
+
+      // Package registry cards
+      if (metrics.registry) {
+        const r = metrics.registry.data;
+        if (r.npm) {
+          const card = document.createElement('div');
+          card.className = 'metric-card';
+          const npmUrl = `https://www.npmjs.com/package/${encodeURIComponent(r.npm.package)}`;
+          card.innerHTML = `
+            <div class="metric-title">NPM Downloads</div>
+            <div class="metric-value">${fmt(r.npm.downloads30d)}</div>
+            <div class="metric-subtitle">last 30 days</div>
+            <div style="margin-top:0.5em;">
+              <a href="${npmUrl}" target="_blank" class="repo-link" style="font-size:0.8em;">
+                <svg viewBox="0 0 16 16" style="width:12px;height:12px;fill:currentColor;"><path d="M0 0h16v16H0V0zm1.5 1.5v13h13v-13h-13zM3 3h10v10H8V5H5v8H3V3z"/></svg>
+                ${r.npm.package}
+              </a>
+            </div>
+          `;
+          metricsGrid.appendChild(card);
+        }
+        if (r.pypi) {
+          const card = document.createElement('div');
+          card.className = 'metric-card';
+          const pypiUrl = `https://pypi.org/project/${encodeURIComponent(r.pypi.package)}/`;
+          card.innerHTML = `
+            <div class="metric-title">PyPI Downloads</div>
+            <div class="metric-value">${fmt(r.pypi.lastMonth)}</div>
+            <div class="metric-subtitle">last 30 days</div>
+            <div style="margin-top:0.5em;display:flex;gap:0.4em;flex-wrap:wrap;">
+              <span class="repo-tag">${fmt(r.pypi.lastWeek)} last 7d</span>
+              <span class="repo-tag">${fmt(r.pypi.lastDay)} yesterday</span>
+            </div>
+            <div style="margin-top:0.5em;">
+              <a href="${pypiUrl}" target="_blank" class="repo-link" style="font-size:0.8em;">
+                <svg viewBox="0 0 16 16" style="width:12px;height:12px;fill:currentColor;"><path d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14.5c-3.58 0-6.5-2.92-6.5-6.5S4.42 1.5 8 1.5 14.5 4.42 14.5 8 11.58 14.5 8 14.5z"/></svg>
+                ${r.pypi.package}
+              </a>
+            </div>
+          `;
+          metricsGrid.appendChild(card);
+        }
+        if (r.cargo) {
+          const card = document.createElement('div');
+          card.className = 'metric-card';
+          const cargoUrl = `https://crates.io/crates/${encodeURIComponent(r.cargo.name)}`;
+          card.innerHTML = `
+            <div class="metric-title">Cargo Downloads</div>
+            <div class="metric-value">${fmt(r.cargo.total)}</div>
+            <div class="metric-subtitle">all-time · v${r.cargo.version}</div>
+            ${r.cargo.recent ? `<div style="margin-top:0.5em;"><span class="repo-tag" title="Downloads in the last 90 days">${fmt(r.cargo.recent)} last 90d</span></div>` : ''}
+            <div style="margin-top:0.5em;">
+              <a href="${cargoUrl}" target="_blank" class="repo-link" style="font-size:0.8em;">
+                <svg viewBox="0 0 16 16" style="width:12px;height:12px;fill:currentColor;"><path d="M8 0L1 4v8l7 4 7-4V4L8 0zm5.5 11.5l-5.5 3-5.5-3v-7l5.5-3 5.5 3v7z"/></svg>
+                ${r.cargo.name}
+              </a>
+            </div>
+          `;
+          metricsGrid.appendChild(card);
+        }
+        if (r.homebrew) {
+          const card = document.createElement('div');
+          card.className = 'metric-card';
+          const brewUrl = `https://formulae.brew.sh/formula/${encodeURIComponent(r.homebrew.name)}`;
+          card.innerHTML = `
+            <div class="metric-title">Homebrew Installs</div>
+            <div class="metric-value">${fmt(r.homebrew.installs30d)}</div>
+            <div class="metric-subtitle">last 30 days</div>
+            <div style="margin-top:0.5em;display:flex;gap:0.4em;flex-wrap:wrap;">
+              <span class="repo-tag">${fmt(r.homebrew.installs90d)} last 90d</span>
+              <span class="repo-tag">${fmt(r.homebrew.installs365d)} last year</span>
+            </div>
+            <div style="margin-top:0.5em;">
+              <a href="${brewUrl}" target="_blank" class="repo-link" style="font-size:0.8em;">
+                <svg viewBox="0 0 16 16" style="width:12px;height:12px;fill:currentColor;"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 14.5a6.5 6.5 0 110-13 6.5 6.5 0 010 13z"/></svg>
+                ${r.homebrew.name}
+              </a>
+            </div>
+          `;
+          metricsGrid.appendChild(card);
+        }
       }
 
       if (metricsGrid.children.length > 0) {

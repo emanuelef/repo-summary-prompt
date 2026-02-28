@@ -373,3 +373,159 @@ export function fetchReleases(repo: string) {
 export function setApiUrl(url: string) {
   process.env.REPO_STATS_API_URL = url;
 }
+
+// --- Package Registry Types ---
+
+export interface NPMDownloads {
+  downloads: number;
+  start: string;
+  end: string;
+  package: string;
+}
+
+export interface PyPIDownloads {
+  data: {
+    last_day: number;
+    last_week: number;
+    last_month: number;
+  };
+  package: string;
+}
+
+export interface CargoDownloads {
+  crate: {
+    downloads: number;
+    recent_downloads: number;
+    newest_version: string;
+    name: string;
+    repository?: string;
+  };
+}
+
+async function fetchExternal<T>(url: string, headers?: Record<string, string>, timeoutMs = 10_000): Promise<T | null> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'Accept': 'application/json', ...headers },
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    return await res.json() as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns true if `url` points to `owner/repo` on GitHub.
+ * Handles git+https://, ssh://git@, trailing .git, etc.
+ */
+function githubRepoMatches(url: string | null | undefined, repo: string): boolean {
+  if (!url) return false;
+  const normalized = url.toLowerCase()
+    .replace(/^git\+/, '')
+    .replace(/^ssh:\/\/git@github\.com\//, 'https://github.com/')
+    .replace(/\.git$/, '');
+  return normalized.includes(`github.com/${repo.toLowerCase()}`);
+}
+
+/**
+ * Fetches NPM download stats for `packageName`, but only if the package's
+ * registry metadata links back to `githubRepo` (owner/repo). This prevents
+ * false positives when the repo name happens to collide with an unrelated package.
+ * Metadata and downloads are fetched in parallel.
+ */
+export async function fetchNPMDownloads(packageName: string, githubRepo: string): Promise<NPMDownloads | null> {
+  const [meta, downloads] = await Promise.all([
+    fetchExternal<{ repository?: { url?: string } | string }>(
+      `https://registry.npmjs.org/${encodeURIComponent(packageName)}`
+    ),
+    fetchExternal<NPMDownloads>(
+      `https://api.npmjs.org/downloads/point/last-month/${encodeURIComponent(packageName)}`
+    ),
+  ]);
+  if (!downloads || !meta) return null;
+  const repoUrl = typeof meta.repository === 'string' ? meta.repository : meta.repository?.url;
+  if (!githubRepoMatches(repoUrl, githubRepo)) return null;
+  return downloads;
+}
+
+/**
+ * Fetches PyPI download stats for `packageName`, but only if the package's
+ * metadata (home_page or project_urls) links back to `githubRepo`.
+ * Metadata and downloads are fetched in parallel.
+ */
+export async function fetchPyPIDownloads(packageName: string, githubRepo: string): Promise<PyPIDownloads | null> {
+  const pkg = packageName.toLowerCase();
+  const [meta, downloads] = await Promise.all([
+    fetchExternal<{ info?: { home_page?: string; project_urls?: Record<string, string> } }>(
+      `https://pypi.org/pypi/${encodeURIComponent(pkg)}/json`
+    ),
+    fetchExternal<PyPIDownloads>(
+      `https://pypistats.org/api/packages/${encodeURIComponent(pkg)}/recent`
+    ),
+  ]);
+  if (!downloads || !meta?.info) return null;
+  const urls = [
+    meta.info.home_page,
+    ...Object.values(meta.info.project_urls || {}),
+  ].filter(Boolean) as string[];
+  if (!urls.some(u => githubRepoMatches(u, githubRepo))) return null;
+  return downloads;
+}
+
+/**
+ * Fetches Cargo download stats for `crateName`, but only if the crate's
+ * `repository` field links back to `githubRepo`.
+ * Downloads and repository URL come from the same endpoint.
+ */
+export async function fetchCargoDownloads(crateName: string, githubRepo: string): Promise<CargoDownloads | null> {
+  const data = await fetchExternal<CargoDownloads>(
+    `https://crates.io/api/v1/crates/${encodeURIComponent(crateName)}`,
+    { 'User-Agent': 'repo-summary-prompt/1.0 (github.com/emanuelef/repo-summary-prompt)' }
+  );
+  if (!data?.crate) return null;
+  if (!githubRepoMatches(data.crate.repository, githubRepo)) return null;
+  return data;
+}
+
+export interface HomebrewStats {
+  name: string;
+  installs30d: number;
+  installs90d: number;
+  installs365d: number;
+}
+
+/**
+ * Fetches Homebrew install analytics for `formulaName`, but only if the formula's
+ * `homepage` or `urls.head.url` links back to `githubRepo`.
+ */
+export async function fetchHomebrewStats(formulaName: string, githubRepo: string): Promise<HomebrewStats | null> {
+  const data = await fetchExternal<{
+    name?: string;
+    homepage?: string;
+    urls?: { head?: { url?: string } };
+    analytics?: {
+      install?: {
+        '30d'?: Record<string, number>;
+        '90d'?: Record<string, number>;
+        '365d'?: Record<string, number>;
+      };
+    };
+  }>(`https://formulae.brew.sh/api/formula/${encodeURIComponent(formulaName.toLowerCase())}.json`);
+
+  if (!data) return null;
+
+  const urls = [data.homepage, data.urls?.head?.url].filter(Boolean) as string[];
+  if (!urls.some(u => githubRepoMatches(u, githubRepo))) return null;
+
+  const name = data.name || formulaName;
+  const installs30d = data.analytics?.install?.['30d']?.[name] ?? 0;
+  const installs90d = data.analytics?.install?.['90d']?.[name] ?? 0;
+  const installs365d = data.analytics?.install?.['365d']?.[name] ?? 0;
+  if (installs365d === 0 && installs30d === 0) return null;
+
+  return { name, installs30d, installs90d, installs365d };
+}

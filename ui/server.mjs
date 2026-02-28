@@ -17,6 +17,16 @@ app.get('/', async (c) => {
   return c.html(html.toString());
 });
 
+app.get('/styles.css', async (c) => {
+  const css = await readFile(new URL('./styles.css', import.meta.url));
+  return c.body(css.toString(), 200, { 'Content-Type': 'text/css' });
+});
+
+app.get('/main.js', async (c) => {
+  const js = await readFile(new URL('./main.js', import.meta.url));
+  return c.body(js.toString(), 200, { 'Content-Type': 'application/javascript' });
+});
+
 
 // Health check endpoint
 app.get('/health', (c) => c.json({ status: 'ok' }));

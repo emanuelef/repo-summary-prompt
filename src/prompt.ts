@@ -15,6 +15,18 @@ import type {
   BuzzSummary,
 } from "./summarize.js";
 
+interface NPMRegistry { downloads30d: number; package: string; }
+interface PyPIRegistry { lastDay: number; lastWeek: number; lastMonth: number; package: string; }
+interface CargoRegistry { total: number; recent: number; version: string; name: string; }
+interface HomebrewRegistry { name: string; installs30d: number; installs90d: number; installs365d: number; }
+
+interface RegistryData {
+  npm?: NPMRegistry;
+  pypi?: PyPIRegistry;
+  cargo?: CargoRegistry;
+  homebrew?: HomebrewRegistry;
+}
+
 interface PromptData {
   repo: string;
   stats: RepoStats | null;
@@ -33,6 +45,7 @@ interface PromptData {
   evolution: EvolutionSummary | null;
   governance: GovernanceSummary | null;
   buzz: BuzzSummary | null;
+  registry: RegistryData | null;
 }
 
 function fmt(n: number): string {
@@ -282,6 +295,25 @@ export function buildPrompt(data: PromptData): string {
       for (const sig of ev.signals) {
         lines.push(`- ${sig}`);
       }
+    }
+    sections.push(lines.join("\n"));
+  }
+
+  // --- Package Registry Downloads ---
+  if (data.registry && (data.registry.npm || data.registry.pypi || data.registry.cargo || data.registry.homebrew)) {
+    const r = data.registry;
+    const lines = [`## Package Registry Downloads`];
+    if (r.npm) {
+      lines.push(`- NPM (\`${r.npm.package}\`): ${fmt(r.npm.downloads30d)} downloads in last 30 days`);
+    }
+    if (r.pypi) {
+      lines.push(`- PyPI (\`${r.pypi.package}\`): ${fmt(r.pypi.lastMonth)} downloads last month | ${fmt(r.pypi.lastWeek)} last week | ${fmt(r.pypi.lastDay)} last day`);
+    }
+    if (r.cargo) {
+      lines.push(`- Cargo (\`${r.cargo.name}\` v${r.cargo.version}): ${fmt(r.cargo.total)} total downloads | ${fmt(r.cargo.recent)} last 90d`);
+    }
+    if (r.homebrew) {
+      lines.push(`- Homebrew (\`${r.homebrew.name}\`): ${fmt(r.homebrew.installs30d)} installs last 30 days | ${fmt(r.homebrew.installs90d)} last 90 days | ${fmt(r.homebrew.installs365d)} last year`);
     }
     sections.push(lines.join("\n"));
   }

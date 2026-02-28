@@ -19,10 +19,11 @@ The hosted version runs on a shared GitHub PAT (also used by [Daily Stars Explor
 
 Given an `owner/repo`, the tool:
 
-1. Fetches stars, commits, PRs, issues, forks, contributors, releases, and social mentions (GitHub, Hacker News, Reddit, YouTube) in parallel.
-2. Computes summaries for each metric - totals, 30-day windows, trends, merge/close rates, backlog health.
-3. Derives an overall **momentum & evolution** assessment (month-over-month growth rates, key signals).
-4. Outputs a single Markdown prompt ready to paste into any LLM for analysis.
+1. Fetches stars, commits, PRs, issues, forks, contributors, releases, and social mentions (GitHub, Hacker News, YouTube).
+2. Checks package registries (NPM, PyPI, Cargo, Homebrew) and shows download/install stats if the repo is listed there — verified by matching the package's repository URL back to the GitHub repo.
+3. Computes summaries for each metric - totals, 30-day windows, trends, merge/close rates, backlog health.
+4. Derives an overall **momentum & evolution** assessment (month-over-month growth rates, key signals).
+5. Outputs a single Markdown prompt ready to paste into any LLM for analysis.
 
 ## Requirements
 
@@ -115,32 +116,30 @@ npx tsx src/index.ts <owner/repo>
 
 ### Frontend (Web UI)
 
+Use the included `dev.sh` script to start everything in one command:
+
 ```bash
-cd ui
-npm install
-cd ..
+./dev.sh          # start the server (installs deps automatically)
+./dev.sh restart  # kill any running instance, then start fresh
+./dev.sh stop     # stop the server and exit
+```
+
+The server starts at `http://localhost:3000`. It spawns the CLI as a child process on demand and streams progress via SSE.
+
+Optional environment variables:
+
+```bash
+PORT=8080 ./dev.sh                             # custom port
+REPO_STATS_API_URL=http://localhost:8090 ./dev.sh  # custom stats API
+USE_OLLAMA=true OLLAMA_URL=http://localhost:11434 OLLAMA_MODEL=llama3 ./dev.sh
+```
+
+Or run the server manually:
+
+```bash
+cd ui && npm install && cd ..
 node ui/server.mjs
 ```
-
-The web UI starts at `http://localhost:3000`. It spawns the CLI as a child process and streams progress via SSE.
-
-To override the stats API URL, set `REPO_STATS_API_URL`:
-
-```bash
-REPO_STATS_API_URL=http://localhost:8090 node ui/server.mjs
-```
-
-### Running both together
-
-```bash
-# Terminal 1 - install deps
-npm install && cd ui && npm install && cd ..
-
-# Terminal 1 - start the web UI (serves frontend + runs CLI on demand)
-node ui/server.mjs
-```
-
-Then open `http://localhost:3000` in your browser.
 
 ## Build
 
@@ -173,8 +172,11 @@ The generated prompt includes:
 | Fork & Contributor Growth | Time-series trends |
 | Releases | Total, latest, cadence, recent frequency |
 | GitHub Mentions | Cross-repo references in issues/PRs/discussions |
-| Hacker News / Reddit / YouTube | Social reach and top posts |
+| Hacker News / YouTube | Social reach and top posts |
+| **Governance** | Leadership model, contributor concentration, bus factor signals |
+| **Social Buzz** | Aggregate buzz score from HN, YouTube, GH mentions |
 | **Momentum & Evolution** | MoM growth rates, aggregate momentum signal, key signals |
+| **Package Registry Downloads** | NPM, PyPI, Cargo, Homebrew stats (when repo is listed there) |
 | Analysis Request | Structured questions asking for trajectory, velocity, health, risks, 6-month outlook |
 
 ## Example output

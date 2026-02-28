@@ -9,9 +9,12 @@ import {
   fetchContributors,
   fetchGHMentions,
   fetchHNMentions,
-  fetchRedditMentions,
   fetchYouTubeMentions,
   fetchReleases,
+  fetchNPMDownloads,
+  fetchPyPIDownloads,
+  fetchCargoDownloads,
+  fetchHomebrewStats,
   setApiUrl,
 } from "./api.js";
 import {
@@ -175,9 +178,58 @@ async function main() {
 
   const ghMentionsData = await tracked("GH mentions", () => fetchGHMentions(repo));
   const hnData = await tracked("HackerNews", () => fetchHNMentions(searchQuery));
-  const redditData = await tracked("Reddit", () => fetchRedditMentions(repo));
+  const redditData = null; // Reddit disabled — API key expired
   const youtubeData = await tracked("YouTube", () => fetchYouTubeMentions(searchQuery));
   const releasesData = await tracked("releases", () => fetchReleases(repo));
+
+  // Fetch package registry stats in parallel (fast external APIs, best-effort)
+  const repoName = repo.split("/")[1];
+  console.error(`  → NPM: fetching...`);
+  console.error(`  → PyPI: fetching...`);
+  console.error(`  → Cargo: fetching...`);
+  console.error(`  → Homebrew: fetching...`);
+  const [npmData, pypiData, cargoData, homebrewData] = await Promise.all([
+    fetchNPMDownloads(repoName, repo),
+    fetchPyPIDownloads(repoName, repo),
+    fetchCargoDownloads(repoName, repo),
+    fetchHomebrewStats(repoName, repo),
+  ]);
+  console.error(`  ${npmData ? "✓" : "✗"} NPM: ${npmData ? "done" : "no data"}`);
+  console.error(`  ${pypiData ? "✓" : "✗"} PyPI: ${pypiData ? "done" : "no data"}`);
+  console.error(`  ${cargoData ? "✓" : "✗"} Cargo: ${cargoData ? "done" : "no data"}`);
+  console.error(`  ${homebrewData ? "✓" : "✗"} Homebrew: ${homebrewData ? "done" : "no data"}`);
+
+  const registryData: Record<string, unknown> = {};
+  if (npmData?.downloads != null) {
+    registryData.npm = { downloads30d: npmData.downloads, package: npmData.package };
+  }
+  if (pypiData?.data) {
+    registryData.pypi = {
+      lastDay: pypiData.data.last_day,
+      lastWeek: pypiData.data.last_week,
+      lastMonth: pypiData.data.last_month,
+      package: pypiData.package,
+    };
+  }
+  if (cargoData?.crate) {
+    registryData.cargo = {
+      total: cargoData.crate.downloads,
+      recent: cargoData.crate.recent_downloads,
+      version: cargoData.crate.newest_version,
+      name: cargoData.crate.name,
+    };
+  }
+  if (homebrewData) {
+    registryData.homebrew = {
+      name: homebrewData.name,
+      installs30d: homebrewData.installs30d,
+      installs90d: homebrewData.installs90d,
+      installs365d: homebrewData.installs365d,
+    };
+  }
+  if (Object.keys(registryData).length > 0) {
+    console.error(`@@METRICS@@${JSON.stringify({ type: "registry", data: registryData })}`);
+  }
 
   // Signal that all metrics have been sent
   console.error(`@@METRICS@@${JSON.stringify({ type: "complete" })}`);
@@ -230,6 +282,7 @@ async function main() {
     evolution,
     governance,
     buzz,
+    registry: Object.keys(registryData).length > 0 ? registryData : null,
   });
 
   // Emit a compact prompt for Ollama (avoids timeouts on small local models)
