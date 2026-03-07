@@ -1,0 +1,35 @@
+---
+description: Project rules for repo-summary-prompt
+globs: ["**/*.ts", "**/*.js", "**/*.mjs"]
+alwaysApply: true
+---
+
+# repo-summary-prompt
+
+GitHub repo analysis tool: TypeScript CLI + Hono web server + vanilla JS frontend.
+
+## Architecture
+
+- `src/index.ts` — CLI entry point; fetches data in parallel, emits `@@METRICS@@` JSON to stderr, prints Markdown prompt to stdout
+- `src/api.ts` — typed fetch helpers for GitHub stats API + package registries (NPM, PyPI, Cargo, Homebrew)
+- `src/summarize.ts` — metric analysis (time-series, rates, momentum)
+- `src/prompt.ts` — assembles summaries into structured Markdown
+- `ui/server.mjs` — Hono SSE server; spawns CLI as child process
+- `ui/main.js` — vanilla JS frontend; renders metric cards and fetch tracker
+
+## Rules
+
+- ESM project: import local `.ts` files with `.js` extension
+- Always run `node ui/server.mjs` from the **project root** (not from `ui/`)
+- No frontend framework — keep `ui/main.js` as vanilla JS
+- New data sources must verify the `repository` field links back to the GitHub repo
+- Use `dev.sh` for local development (start / stop / restart)
+
+## Dev commands
+
+```bash
+./dev.sh              # start
+./dev.sh restart      # restart
+npx tsx src/index.ts <owner/repo>  # CLI only
+npx tsc --noEmit      # type-check
+```
