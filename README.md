@@ -4,7 +4,7 @@
 
 > **No sign-up. No ads. No cookies.** Use the [hosted version](https://emanuelef.github.io/repo-summary-prompt) instantly, or self-host your own instance in minutes.
 
-<img width="1262" height="2010" alt="RepoChronicle screenshot" src="https://github.com/user-attachments/assets/19ab9dd0-6af5-4799-b67a-61e0255f0a6c" />
+
 
 ## What it tells you
 
