@@ -14,7 +14,7 @@ on:
     branches: [ main ]
     paths:
       - 'ui/index.html'
-      - 'ui/main.js'
+      - 'ui/*.js'
       - 'ui/styles.css'
       - '.github/workflows/gh-pages.yml'
   workflow_dispatch:
@@ -36,8 +36,8 @@ jobs:
         run: |
           mkdir -p public
           cp ui/index.html public/index.html
-          cp ui/main.js public/main.js
           cp ui/styles.css public/styles.css
+          cp ui/*.js public/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
