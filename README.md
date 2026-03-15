@@ -1,88 +1,55 @@
-# repo-summary-prompt
+# RepoChronicle
 
-CLI tool that fetches GitHub repo metrics from a stats API and generates a structured LLM prompt summarizing a project's health, momentum, and evolution trajectory.
+**Understand any GitHub repository at a glance** — activity, momentum, ecosystem impact, and social reach, all in one dashboard.
 
 > **No sign-up. No ads. No cookies.** Use the [hosted version](https://emanuelef.github.io/repo-summary-prompt) instantly, or self-host your own instance in minutes.
 
-The hosted version runs on a shared GitHub PAT (also used by [Daily Stars Explorer](https://emanuelef.github.io/daily-stars-explorer)) and is rate-limited to protect it: **20 fetches/day**, with a **1-hour cooldown** on repos over 10k stars. Fine for a demo or a few repos. For regular use, [self-host your own instance](#self-hosting-with-docker-compose) with your own PAT.
+<img width="1262" height="2010" alt="RepoChronicle screenshot" src="https://github.com/user-attachments/assets/19ab9dd0-6af5-4799-b67a-61e0255f0a6c" />
 
-<img width="1262" height="2010" alt="screencapture-localhost-3000-2026-02-13-17_09_11" src="https://github.com/user-attachments/assets/19ab9dd0-6af5-4799-b67a-61e0255f0a6c" />
+## What it tells you
+
+Type any `owner/repo` and get an instant snapshot of:
+
+- **Is this repo alive?** — commit frequency, last activity, liveness score, release cadence
+- **Is it growing or stalling?** — star/fork/contributor trends, month-over-month momentum signals
+- **Who's using it beyond GitHub?** — download counts from NPM, PyPI, Cargo, and Homebrew (auto-detected, verified by matching the package's repo URL)
+- **Is the wider world talking about it?** — Hacker News posts, YouTube videos, cross-repo GitHub mentions
+- **Is the project well maintained?** — PR merge rates, issue resolution rates, backlog trends, contributor concentration
+- **Full LLM-ready summary** — everything above assembled into a structured Markdown prompt you can paste into any AI for a deep analysis
+
+The hosted version runs on a shared GitHub PAT (also used by [Daily Stars Explorer](https://emanuelef.github.io/daily-stars-explorer)) and is rate-limited to protect it: **20 fetches/day**, with a **1-hour cooldown** on repos over 10k stars. For regular use, [self-host your own instance](#self-hosting-with-docker-compose) with your own PAT.
 
 ## Privacy
 
-- **No account required** - just type a repo name and go
-- **No tracking or analytics** - no cookies, no fingerprinting, no third-party scripts
-- **No data stored** - results are computed on demand and cached in memory only (cleared at UTC midnight)
-- **Self-hostable** - run your own instance with full control over your data and API token
+- **No account required** — just type a repo name and go
+- **No tracking or analytics** — no cookies, no fingerprinting, no third-party scripts
+- **No data stored** — results are computed on demand and cached in memory only (cleared at UTC midnight)
+- **Self-hostable** — run your own instance with full control over your data and API token
 
-## What it does
+## How it works
 
-Given an `owner/repo`, the tool:
+Given an `owner/repo`, RepoChronicle:
 
-1. Fetches stars, commits, PRs, issues, forks, contributors, releases, and social mentions (GitHub, Hacker News, YouTube).
-2. Checks package registries (NPM, PyPI, Cargo, Homebrew) and shows download/install stats if the repo is listed there — verified by matching the package's repository URL back to the GitHub repo.
-3. Computes summaries for each metric - totals, 30-day windows, trends, merge/close rates, backlog health.
-4. Derives an overall **momentum & evolution** assessment (month-over-month growth rates, key signals).
-5. Outputs a single Markdown prompt ready to paste into any LLM for analysis.
+1. Fetches GitHub metrics: stars, commits, PRs, issues, forks, contributors, releases
+2. Checks **package registries** (NPM, PyPI, Cargo, Homebrew) for download/install counts — verified by matching the package's `repository` URL back to the GitHub repo
+3. Searches **social platforms**: Hacker News posts, YouTube videos, cross-repo GitHub mentions
+4. Computes time-series summaries: 30-day windows, month-over-month growth rates, trend signals
+5. Renders an **interactive dashboard** with metric cards and charts
+6. Outputs a **structured Markdown prompt** ready to paste into ChatGPT, Claude, Gemini, or any LLM
 
 ## Requirements
 
 - **Node.js** ≥ 18 (uses native `fetch`)
 - **npm** or any compatible package manager
 
-## Install
-
-```bash
-git clone <this-repo>
-cd repo-summary-prompt
-npm install
-```
-
-## Usage
-
-```bash
-# Run directly with tsx
-npx tsx src/index.ts <owner/repo>
-
-# Examples
-npx tsx src/index.ts golang/go
-npx tsx src/index.ts facebook/react
-npx tsx src/index.ts charmbracelet/gum
-```
-
-The generated prompt is printed to **stdout**. Progress/error messages go to **stderr**, so you can pipe the prompt cleanly:
-
-```bash
-npx tsx src/index.ts kubernetes/kubernetes > prompt.md
-```
-
-### Custom API URL
-
-By default the tool talks to `https://emafuma.mywire.org:8090`. Override with a flag or env var:
-
-```bash
-# Flag
-npx tsx src/index.ts golang/go --api-url http://localhost:8090
-
-# Environment variable
-REPO_STATS_API_URL=http://localhost:8090 npx tsx src/index.ts golang/go
-```
-
-### Using as a global CLI
-
-```bash
-npm link
-repo-summary-prompt golang/go
-```
-
 ## Self-hosting with Docker Compose
 
 The easiest way to run everything locally is with Docker Compose. It starts two containers:
 
-- **`daily-stars-explorer`** - the stats API (port 8080) that powers the metrics
-- **`repo-summary-prompt`** - the web UI + CLI (port 3000), pre-configured to talk to the stats API
+- **`daily-stars-explorer`** — the stats API (port 8080) that powers the metrics
+- **`repo-chronicle`** — the web UI + CLI (port 3000), pre-configured to talk to the stats API
 
-**Requirements:** Docker, a GitHub Personal Access Token ([generate one](https://github.com/settings/tokens) - no repo access needed).
+**Requirements:** Docker, a GitHub Personal Access Token ([generate one](https://github.com/settings/tokens) — no repo access needed).
 
 ```bash
 # 1. Copy the example env file and fill in your PAT
@@ -101,67 +68,83 @@ To pull the latest images before starting:
 docker compose pull && docker compose up
 ```
 
-> The `REPO_STATS_API_URL` is automatically wired between containers - no manual configuration needed.
+> The `REPO_STATS_API_URL` is automatically wired between containers — no manual configuration needed.
 
 ## Development
 
-The project has two parts: a CLI backend and a web UI frontend.
+### Web UI
 
-### Backend (CLI)
-
-```bash
-npm install
-npx tsx src/index.ts <owner/repo>
-```
-
-### Frontend (Web UI)
-
-Use the included `dev.sh` script to start everything in one command:
+Use the included `dev.sh` script:
 
 ```bash
 ./dev.sh          # start the server (installs deps automatically)
 ./dev.sh restart  # kill any running instance, then start fresh
-./dev.sh stop     # stop the server and exit
+./dev.sh stop     # stop the server
 ```
 
-The server starts at `http://localhost:3000`. It spawns the CLI as a child process on demand and streams progress via SSE.
+The server starts at `http://localhost:3000`.
 
 Optional environment variables:
 
 ```bash
-PORT=8080 ./dev.sh                             # custom port
-REPO_STATS_API_URL=http://localhost:8090 ./dev.sh  # custom stats API
+PORT=8080 ./dev.sh
+REPO_STATS_API_URL=http://localhost:8090 ./dev.sh
 USE_OLLAMA=true OLLAMA_URL=http://localhost:11434 OLLAMA_MODEL=llama3 ./dev.sh
 ```
 
-Or run the server manually:
+### CLI
+
+The CLI can also be run directly — it prints a full Markdown prompt to stdout:
 
 ```bash
-cd ui && npm install && cd ..
-node ui/server.mjs
+npm install
+npx tsx src/index.ts golang/go
+npx tsx src/index.ts facebook/react > prompt.md
 ```
 
-## Build
+Progress/error messages go to stderr so you can pipe the prompt cleanly.
+
+#### Custom API URL
 
 ```bash
-npm run build   # compiles to dist/
+npx tsx src/index.ts golang/go --api-url http://localhost:8090
+# or
+REPO_STATS_API_URL=http://localhost:8090 npx tsx src/index.ts golang/go
 ```
+
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `3000` | Web UI port |
+| `REPO_STATS_API_URL` | `https://emafuma.mywire.org:8090` | Stats API base URL |
+| `USE_OLLAMA` | — | Set to `true` to enable local AI analysis |
+| `OLLAMA_URL` | — | Ollama server URL |
+| `OLLAMA_MODEL` | — | Ollama model name |
+| `MAX_DAILY_FETCHES` | `20` | Daily fetch quota (`unlimited` to disable) |
 
 ## Project structure
 
 ```
 src/
-  index.ts       CLI entry point - arg parsing, parallel fetching, orchestration
-  api.ts         API client - types and fetch functions for each endpoint
-  summarize.ts   Data crunching - time-series analysis, PR/issue rates, evolution metrics
-  prompt.ts      Prompt builder - assembles all summaries into a structured Markdown prompt
+  index.ts       CLI entry point — arg parsing, parallel fetching, orchestration
+  api.ts         API client — types and fetch functions for each data source
+  summarize.ts   Data crunching — time-series analysis, PR/issue rates, momentum metrics
+  prompt.ts      Prompt builder — assembles all summaries into a structured Markdown prompt
+ui/
+  server.mjs     Hono web server — spawns CLI, streams results via SSE
+  main.js        Frontend entry point
+  dashboard.js   Metric cards and charts rendering
+  handlers.js    UI interactions (theme, autocomplete, share, etc.)
+  tracker.js     Fetch progress tracker and skeleton loading
+  state.js       Shared frontend state
+  config.js      Constants (fetch steps, language colours, API base)
+  utils.js       Pure utility functions
 ```
 
-## Output sections
+## Dashboard sections
 
-The generated prompt includes:
-
-| Section | Data |
+| Section | What it shows |
 |---|---|
 | Repository Info | Language, age, stars, forks, size, archived status |
 | Activity Assessment | Liveness score, last commit/star/release dates |
@@ -172,149 +155,13 @@ The generated prompt includes:
 | Fork & Contributor Growth | Time-series trends |
 | Releases | Total, latest, cadence, recent frequency |
 | GitHub Mentions | Cross-repo references in issues/PRs/discussions |
-| Hacker News / YouTube | Social reach and top posts |
-| **Governance** | Leadership model, contributor concentration, bus factor signals |
-| **Social Buzz** | Aggregate buzz score from HN, YouTube, GH mentions |
-| **Momentum & Evolution** | MoM growth rates, aggregate momentum signal, key signals |
-| **Package Registry Downloads** | NPM, PyPI, Cargo, Homebrew stats (when repo is listed there) |
-| Analysis Request | Structured questions asking for trajectory, velocity, health, risks, 6-month outlook |
+| Hacker News / YouTube | Social reach and top posts/videos |
+| Governance | Leadership model, contributor concentration, bus factor signals |
+| Social Buzz | Aggregate buzz score from HN, YouTube, GH mentions |
+| Momentum & Evolution | MoM growth rates, aggregate momentum signal, key signals |
+| Package Registry Downloads | NPM, PyPI, Cargo, Homebrew stats (auto-detected) |
 
-## Example output
-
-### Generated prompt
-
-```
-npx tsx src/index.ts emanuelef/daily-stars-explorer
-Fetching data for emanuelef/daily-stars-explorer...
-You are a software project analyst specialising in open-source ecosystem dynamics. Based on the following data about the GitHub repository **emanuelef/daily-stars-explorer**, provide a comprehensive summary of how this project is **evolving** - its trajectory, momentum, and the direction it is heading.
-
-## Repository Info
-- Name: emanuelef/daily-stars-explorer
-- Language: JavaScript
-- Created: 2023-09-22
-- Stars: 322 | Forks: 9 | Open Issues: 4
-- Mentionable Users: 3
-- Archived: No
-- Size: 1,602 KB
-- Default Branch: main
-
-## Activity Assessment
-- Activity Level: **very active**
-- Liveness Score: 90/100
-- Last Commit: 2026-02-12 (0 days ago)
-- Last Star: 2026-02-12
-- Last Release: 2026-02-07 (5 days ago)
-
-## Star History Summary
-- Total (tracked period): 321
-- Avg per month: 11
-- Last 30 days: 20
-- Last 10 days: 3
-- Peak day: 25-11-2024 (19)
-- Trend: growing
-- Tracked period: 22-09-2023 to 11-02-2026 (874 days)
-- All-time peak day: 25-11-2024 (19 stars)
-- Peak period: 23-11-2024 to 02-12-2024 (40 stars)
-
-## Commit Activity Summary
-- Total (tracked period): 604
-- Avg per month: 21
-- Last 30 days: 65
-- Last 10 days: 32
-- Peak day: 01-10-2023 (14)
-- Trend: growing
-- Tracked period: 22-09-2023 to 12-02-2026 (875 days)
-
-## Pull Request Activity
-- Total (tracked period): 203
-- Avg per month: 7
-- Last 30 days: 15
-- Last 10 days: 9
-- Peak day: 08-04-2024 (11)
-- Trend: growing
-- Tracked period: 22-09-2023 to 12-02-2026 (875 days)
-- Total opened: 203 | Total closed: 129 | Total merged: 35,237
-- Merge rate: 17358% | Close rate: 64%
-- Last 30 days - opened: 15, closed: 1, merged: 1,899
-- PR velocity trend: accelerating
-
-## Issue Activity
-- Total (tracked period): 28
-- Avg per month: 1
-- Last 30 days: 1
-- Last 10 days: 0
-- Peak day: 05-03-2024 (3)
-- Trend: growing
-- Tracked period: 22-09-2023 to 12-02-2026 (875 days)
-- Total opened: 28 | Total closed: 14,095
-- Resolution rate: 50339%
-- Last 30 days - opened: 1, closed: 859 (net: -858)
-- Backlog trend: shrinking
-
-## Fork Activity Summary
-- Total (tracked period): 9
-- Avg per month: 0
-- Last 30 days: 1
-- Last 10 days: 1
-- Peak day: 17-10-2024 (1)
-- Trend: growing
-- Tracked period: 22-09-2023 to 12-02-2026 (875 days)
-
-## Contributor Growth
-- Total (tracked period): 3
-- Avg per month: 0
-- Last 30 days: 0
-- Last 10 days: 0
-- Peak day: 24-09-2023 (1)
-- Trend: stable
-- Tracked period: 22-09-2023 to 12-02-2026 (875 days)
-
-## Releases
-- Total releases: 9
-- Latest release: v0.1.0 (2026-02-08)
-- Releases in last 90 days: 2
-- Avg days between releases: 92
-
-## GitHub Mentions (references in other repos)
-- Total mentions: 2
-- Issues: 0 | PRs: 2 | Discussions: 0
-- Mentions in last 30 days: 1
-
-## YouTube Presence
-- Total videos: 15
-- Total views: 762
-- Top video: "Cosmic Stream (feat. Matrineasial & Ky Adeyemo)" (548 views)
-
-## Project Momentum & Evolution
-- Overall momentum: **strong growth**
-- Star growth MoM: +82%
-- Commit activity MoM: +210%
-- PR activity MoM: +999%
-- Issue activity MoM: +999%
-- Fork growth MoM: +999%
-
-### Key Signals
-- Commit frequency is increasing
-- Star growth is accelerating
-- PR velocity is accelerating
-- High PR merge rate - contributions are actively being integrated
-- Issue backlog is shrinking - maintainers are catching up
-- Very recent commits - active development
-
----
-
-Based on all the data above, provide a comprehensive analysis of **how this project is evolving**. Structure your answer as follows:
-
-1. **Trajectory Summary** - Is this project accelerating, cruising, decelerating, or stalling? Describe the overall direction in 2-3 sentences.
-2. **Development Velocity** - How has commit, PR, and release activity changed recently? Is the team shipping faster or slower?
-3. **Community & Adoption Trends** - Are stars, forks, and contributors growing? Is external interest (HN, Reddit, YouTube) rising or fading?
-4. **Maintenance Health** - Are issues being resolved? Is the PR merge rate healthy? Is the backlog under control?
-5. **Key Strengths** - What is going well for this project?
-6. **Key Risks & Concerns** - What signals suggest potential problems?
-7. **6-Month Outlook** - Based on current trends, what is this project likely to look like in 6 months?
-```
-
-### Example LLM response
+## Example LLM analysis
 
 <details>
 <summary>ChatGPT analysis of <code>emanuelef/daily-stars-explorer</code></summary>
@@ -323,199 +170,44 @@ Below is a structured analysis of **emanuelef/daily-stars-explorer** and how it 
 
 ---
 
-# 1️⃣ Trajectory Summary - **Clearly Accelerating**
+# 1️⃣ Trajectory Summary — **Clearly Accelerating**
 
-This project is in a strong acceleration phase. Nearly all activity metrics (stars, commits, PRs, forks) show sharp month-over-month growth, and recent activity levels are significantly above historical averages. The repository is not just active - it is intensifying in momentum.
-
-It appears to be transitioning from a stable niche tool into a rapidly evolving and increasingly visible project.
+This project is in a strong acceleration phase. Nearly all activity metrics (stars, commits, PRs, forks) show sharp month-over-month growth, and recent activity levels are significantly above historical averages. The repository is not just active — it is intensifying in momentum.
 
 ---
 
-# 2️⃣ Development Velocity - **Shipping Much Faster**
+# 2️⃣ Development Velocity — **Shipping Much Faster**
 
-### 🔹 Commits
-
-* 604 total commits
-* 65 in the last 30 days (vs. 21/month average)
-* 32 in the last 10 days
-* MoM growth: **+210%**
-* Trend: growing
-
-Commit frequency is substantially higher than baseline, indicating active feature work, refactoring, or scaling efforts. Development is currently operating at roughly **3x historical velocity**.
-
-### 🔹 Pull Requests
-
-* 15 opened in last 30 days
-* 9 in last 10 days
-* PR velocity trend: accelerating
-* MoM growth: **+999%**
-
-The PR layer shows explosive recent activity. Even accounting for anomalous merge statistics, the direction is clear: contribution throughput has sharply increased.
-
-### 🔹 Releases
-
-* 9 total releases
-* 2 releases in last 90 days
-* Latest release: 5 days ago
-* Avg 92 days between releases
-
-Releases are becoming more frequent, and the very recent release suggests a stabilization and packaging phase accompanying higher dev velocity.
-
-**Conclusion:** The team is shipping faster than at any previous time in the project’s history.
+* 604 total commits · 65 in the last 30 days (vs. 21/month average)
+* MoM commit growth: **+210%** · PR activity MoM: **+999%**
+* Latest release: 5 days ago · releases becoming more frequent
 
 ---
 
-# 3️⃣ Community & Adoption Trends - **Interest Is Rising**
+# 3️⃣ Community & Adoption Trends — **Interest Is Rising**
 
-### ⭐ Stars
-
-* 322 total
-* 20 in last 30 days (well above 11/month average)
-* MoM star growth: **+82%**
-* Trend: growing
-
-Star growth is accelerating. The project had a breakout spike in November 2024, but recent growth suggests a *second wave of traction*.
-
-### 🍴 Forks
-
-* 9 total
-* 1 in last 30 days
-* MoM fork growth: +999%
-
-Fork activity remains modest in absolute terms but is trending upward. This suggests experimentation and possibly downstream reuse.
-
-### 👥 Contributors
-
-* 3 total contributors
-* Stable over time
-
-Contributor count is not expanding. The project remains effectively maintainer-driven.
-
-### 📢 External Signals
-
-* 2 GitHub mentions (1 in last 30 days)
-* 15 YouTube videos (762 views total)
-
-External visibility is emerging but still niche. The presence of YouTube content suggests early ecosystem formation, though overall reach is still limited.
-
-**Conclusion:** Adoption is rising, but the contributor base remains narrow. The project is gaining attention faster than it is decentralizing.
+* 322 stars · 20 in last 30 days (well above 11/month avg) · MoM: **+82%**
+* 15 YouTube videos (762 views) · 2 GitHub cross-repo mentions
 
 ---
 
-# 4️⃣ Maintenance Health - **Strong Operational Discipline**
+# 4️⃣ Maintenance Health — **Strong Operational Discipline**
 
-### 🧹 Issues
-
-* 28 opened total
-* Only 4 currently open
-* Backlog shrinking
-* Resolution rate extremely high
-* Net -858 in last 30 days (indicates cleanup automation or bulk closures)
-
-Despite anomalies in resolution metrics, the signal is clear: issues are not accumulating. The backlog is tightly controlled.
-
-### 🔄 PR Handling
-
-* High merge throughput
-* Active integration of contributions
-* PR velocity accelerating
-
-Even though merge statistics appear inflated, the pattern suggests that maintainers are integrating changes quickly and not letting work stagnate.
-
-### 🟢 Liveness Score: 90/100
-
-Very recent commits and release activity confirm active stewardship.
-
-**Conclusion:** The project is well maintained, responsive, and not suffering from backlog decay.
+* Issues not accumulating · backlog shrinking · liveness score: 90/100
+* High PR merge throughput — contributions actively integrated
 
 ---
 
-# 5️⃣ Key Strengths
+# 5️⃣ Key Risks
 
-### 🚀 1. Strong Upward Momentum
-
-All growth signals - stars, commits, PRs - are accelerating simultaneously.
-
-### ⚡ 2. High Development Energy
-
-Recent 30-day commit and PR volume significantly exceed historical averages.
-
-### 🧹 3. Backlog Under Control
-
-Issues are being resolved faster than they accumulate.
-
-### 📦 4. Release Discipline
-
-Recent releases show maturation beyond experimental phase.
-
-### 📈 5. Second-Wave Traction
-
-After a 2024 peak, growth is resuming - suggesting sustained rather than one-off interest.
+* Only 3 contributors — high bus-factor risk
+* Limited ecosystem footprint (low forks, minimal mentions)
 
 ---
 
-# 6️⃣ Key Risks & Concerns
+# 6️⃣ 6-Month Outlook
 
-### ⚠️ 1. Low Contributor Diversity
-
-Only 3 contributors across 875 days. If most work is driven by a single maintainer, scaling risk exists.
-
-### ⚠️ 2. PR & Issue Metric Anomalies
-
-The extremely high merge and resolution percentages suggest automation artifacts or data irregularities. If much of the activity is automated, apparent velocity may overstate organic community engagement.
-
-### ⚠️ 3. Limited Ecosystem Footprint
-
-* Low forks
-* Minimal GitHub mentions
-* Modest YouTube engagement
-
-The project is growing, but not yet embedded deeply in the broader open-source ecosystem.
-
-### ⚠️ 4. Star-to-Fork Ratio
-
-322 stars but only 9 forks indicates interest without heavy downstream development adoption.
-
----
-
-# 7️⃣ 6-Month Outlook
-
-If current trends persist:
-
-### Likely Scenario (Most Probable)
-
-* 450–600 stars
-* Continued high commit frequency
-* More frequent releases (potential move toward v1.x stabilization)
-* Slight contributor growth (possibly 1–2 new contributors)
-
-### Structural Evolution
-
-The project appears to be moving from:
-
-> "Interesting tool with periodic spikes"
-> to
-> "Actively evolving product with consistent momentum"
-
-If contributor growth begins matching star growth, it could transition into a small but healthy ecosystem project.
-
-### Risk Scenario
-
-If activity is primarily maintainer-driven and unsustainable, velocity could normalize sharply after this burst phase.
-
----
-
-# 📊 Overall Assessment
-
-**Status: High-Growth Phase with Maintainer-Driven Acceleration**
-
-daily-stars-explorer is currently in a pronounced expansion cycle - development velocity, adoption, and release cadence are all rising simultaneously. Operational health is strong, backlog is controlled, and momentum signals are positive.
-
-The key inflection point ahead is contributor diversification.
-If community participation expands, the project could mature into a durable open-source tool.
-If not, it remains a high-energy but centrally driven effort.
-
-At present, the trajectory is clearly upward.
+450–600 stars · continued high commit frequency · possible v1.x stabilisation · 1–2 new contributors if outreach grows
 
 </details>
 
