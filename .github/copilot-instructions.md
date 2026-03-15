@@ -1,6 +1,6 @@
 # GitHub Copilot Instructions
 
-## Project: repo-summary-prompt
+## Project: RepoChronicle (repo-summary-prompt)
 
 TypeScript CLI + Hono web server that fetches GitHub repo metrics and generates structured Markdown prompts for LLM analysis of project health and trajectory.
 

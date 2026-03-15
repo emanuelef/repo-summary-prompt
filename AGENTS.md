@@ -4,7 +4,7 @@ Instructions for AI coding agents (OpenAI Codex, Devin, etc.) working in this re
 
 ## Project overview
 
-**repo-summary-prompt** is a GitHub repo analysis tool with two parts:
+**RepoChronicle** (repo-summary-prompt) is a GitHub repo analysis tool with two parts:
 - A TypeScript CLI (`src/`) that fetches metrics and outputs a structured Markdown prompt
 - A web UI (`ui/`) with a Hono server and vanilla JS frontend that wraps the CLI
 

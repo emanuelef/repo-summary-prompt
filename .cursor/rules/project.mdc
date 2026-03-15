@@ -4,7 +4,7 @@ globs: ["**/*.ts", "**/*.js", "**/*.mjs"]
 alwaysApply: true
 ---
 
-# repo-summary-prompt
+# RepoChronicle (repo-summary-prompt)
 
 GitHub repo analysis tool: TypeScript CLI + Hono web server + vanilla JS frontend.
 

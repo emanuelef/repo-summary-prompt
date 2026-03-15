@@ -4,7 +4,7 @@ Instructions for Claude Code when working in this repository.
 
 ## Project overview
 
-**repo-summary-prompt** (also known as RepoLens) is a GitHub repo analysis tool that fetches metrics and generates structured Markdown prompts for LLM analysis.
+**repo-summary-prompt** (also known as RepoChronicle) is a GitHub repo analysis tool that fetches metrics and generates structured Markdown prompts for LLM analysis.
 
 Architecture:
 - `src/` — TypeScript CLI (`npx tsx src/index.ts <owner/repo>`)
