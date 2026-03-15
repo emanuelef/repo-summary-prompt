@@ -260,6 +260,32 @@ async function main() {
     console.error(`@@METRICS@@${JSON.stringify({ type: "buzz", data: buzz })}`);
   }
 
+  // Emit raw mention items for the UI "View all mentions" panel
+  if (hnData?.length) {
+    console.error(`@@METRICS@@${JSON.stringify({
+      type: "hn_items",
+      data: [...hnData]
+        .sort((a, b) => b.Points - a.Points)
+        .map(i => ({ title: i.Title, points: i.Points, comments: i.NumComments, date: i.CreatedAt.split('T')[0], url: i.HNURL })),
+    })}`);
+  }
+  if (youtubeData?.length) {
+    console.error(`@@METRICS@@${JSON.stringify({
+      type: "youtube_items",
+      data: [...youtubeData]
+        .sort((a, b) => b.view_count - a.view_count)
+        .map(i => ({ title: i.title, views: i.view_count, date: i.published_at.split('T')[0], url: i.video_url })),
+    })}`);
+  }
+  if (ghMentionsData?.mentions?.length) {
+    console.error(`@@METRICS@@${JSON.stringify({
+      type: "gh_mention_items",
+      data: [...ghMentionsData.mentions]
+        .sort((a, b) => new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime())
+        .map(m => ({ type: m.Type, title: m.Title, url: m.URL, repo: m.Repository, date: m.CreatedAt.split('T')[0], author: m.Author })),
+    })}`);
+  }
+
   // Compute evolution / momentum analysis
   const evolution = computeEvolution({ stars, commits, prs, issues, forks, activity, releases });
 

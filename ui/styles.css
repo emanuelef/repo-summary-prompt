@@ -760,3 +760,95 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+
+    /* ── Mentions panel ───────────────────────────────── */
+    .mentions-panel {
+      margin-top: 1em;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.25em 1.5em;
+      animation: fadeIn 0.2s ease;
+    }
+    .mentions-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25em;
+    }
+    .mentions-panel-title {
+      font-size: 0.95em;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .mentions-close-btn {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 0.25em 0.65em;
+      font-size: 0.78em;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .mentions-close-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.25); }
+    .mentions-sections-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25em;
+    }
+    .mentions-section-title {
+      display: flex;
+      align-items: center;
+      gap: 0.45em;
+      font-size: 0.82em;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.65em;
+    }
+    .mentions-count {
+      background: rgba(255,255,255,0.07);
+      border-radius: 10px;
+      padding: 0.1em 0.5em;
+      font-size: 0.9em;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .mentions-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65em;
+    }
+    .mentions-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2em;
+    }
+    .mentions-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.85em;
+      line-height: 1.4;
+    }
+    .mentions-link:hover { text-decoration: underline; }
+    .mentions-meta {
+      font-size: 0.75em;
+      color: var(--text-muted);
+    }
+    .mentions-type-tag {
+      display: inline-block;
+      font-size: 0.7em;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.1em 0.4em;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.07);
+      color: var(--text-muted);
+      margin-bottom: 0.1em;
+      width: fit-content;
+    }

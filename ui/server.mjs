@@ -22,9 +22,14 @@ app.get('/styles.css', async (c) => {
   return c.body(css.toString(), 200, { 'Content-Type': 'text/css' });
 });
 
-app.get('/main.js', async (c) => {
-  const js = await readFile(new URL('./main.js', import.meta.url));
-  return c.body(js.toString(), 200, { 'Content-Type': 'application/javascript' });
+// Serve any .js module from the ui/ directory
+app.get('/:file{.+\\.js}', async (c) => {
+  try {
+    const js = await readFile(new URL(`./${c.req.param('file')}`, import.meta.url));
+    return c.body(js.toString(), 200, { 'Content-Type': 'application/javascript' });
+  } catch {
+    return c.notFound();
+  }
 });
 
 
